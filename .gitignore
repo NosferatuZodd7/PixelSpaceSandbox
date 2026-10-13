@@ -1,0 +1,20 @@
+# Godot 4 cache and generated files
+.godot/
+/android/
+
+# Imported translations (regenerated from locale/*.csv on import)
+*.translation
+
+# Export output and local export credentials
+/build/
+export_credentials.cfg
+
+# Test and tool output
+/tests/output/
+
+# OS and editor clutter
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/

@@ -1,0 +1,10 @@
+{
+	"notes": "Default key bindings. Keys use Godot key names (\"Escape\", \"F11\", \"Ctrl+Z\"). Players will be able to rebind every action; these are only the defaults.",
+	"actions": {
+		"quit": ["Escape"],
+		"toggle_fullscreen": ["F11", "Alt+Enter"],
+		"new_sky": ["R"],
+		"toggle_language": ["L"],
+		"toggle_palette": ["P"]
+	}
+}

@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/title_screen.gd" id="1_title"]
+[ext_resource type="Script" path="res://src/view/starfield_background.gd" id="2_sky"]
+[ext_resource type="Script" path="res://src/ui/palette_strip.gd" id="3_palette"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_title")
+
+[node name="Sky" type="Node2D" parent="."]
+script = ExtResource("2_sky")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SeedLabel" type="Label" parent="UI/Root"]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 208.0
+offset_bottom = 18.0
+theme_type_variation = &"DimLabel"
+auto_translate_mode = 2
+text = "Seed 7"
+
+[node name="VersionLabel" type="Label" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -248.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = 18.0
+grow_horizontal = 0
+theme_type_variation = &"DimLabel"
+auto_translate_mode = 2
+text = "v0.0.0"
+horizontal_alignment = 2
+
+[node name="LanguageLabel" type="Label" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -248.0
+offset_top = 18.0
+offset_right = -8.0
+offset_bottom = 30.0
+grow_horizontal = 0
+theme_type_variation = &"DimLabel"
+auto_translate_mode = 2
+text = "English"
+horizontal_alignment = 2
+
+[node name="Title" type="Label" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 112.0
+offset_bottom = 130.0
+grow_horizontal = 2
+theme_type_variation = &"TitleLabel"
+auto_translate_mode = 2
+text = "PIXEL SPACE SANDBOX"
+horizontal_alignment = 1
+
+[node name="Tagline" type="Label" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 138.0
+offset_bottom = 150.0
+grow_horizontal = 2
+text = "TITLE_TAGLINE"
+horizontal_alignment = 1
+
+[node name="Milestone" type="Label" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 152.0
+offset_bottom = 164.0
+grow_horizontal = 2
+theme_type_variation = &"DimLabel"
+text = "MILESTONE_LABEL"
+horizontal_alignment = 1
+
+[node name="PaletteStrip" type="Control" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 196.0
+offset_right = 126.0
+offset_bottom = 227.0
+grow_horizontal = 2
+script = ExtResource("3_palette")
+
+[node name="Hints" type="HBoxContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -22.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 3
+alignment = 1
