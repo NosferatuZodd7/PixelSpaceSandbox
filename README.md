@@ -20,6 +20,18 @@ Made with Godot 4 (Compatibility renderer) to run smoothly on weak PCs.
 Keys on the title screen: **R** new sky, **L** language, **P** palette,
 **F11** fullscreen, **Esc** quit.
 
+## Test builds
+
+Every push to `beta` or `main` builds the Windows and Linux executables on
+GitHub Actions with the official Godot export templates, after running all
+the checks, and starts the Windows build on a real Windows machine.
+
+To download them: open the repository's **Actions** tab, pick the latest
+**Build** run, and download **PixelSpaceSandbox-windows** or
+**PixelSpaceSandbox-linux** from its **Artifacts**. On Windows, the first
+launch shows "Windows protected your PC" because the game is not signed:
+choose **More info → Run anyway**.
+
 ## Running the tests
 
 The tests run headless (no window) and fail on any error or warning:

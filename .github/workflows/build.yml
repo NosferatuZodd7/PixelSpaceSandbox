@@ -1,0 +1,109 @@
+# Tests the project and builds the Windows and Linux executables with the
+# official Godot release and export templates (the Windows build ships the
+# ANGLE fallback). The Windows build is then started on a real Windows
+# machine to check it runs. Download the builds from the run's "Artifacts".
+name: Build
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  test-and-export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot and its export templates
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          unzip -q templates.tpz -d "$RUNNER_TEMP/tpz"
+          mv "$RUNNER_TEMP"/tpz/templates/* "$templates"/
+          rm -rf godot.zip templates.tpz "$RUNNER_TEMP/tpz"
+          ls "$templates"
+
+      - name: Run the checks
+        run: tools/run_tests.sh
+
+      - name: Export Windows and Linux builds
+        run: |
+          mkdir -p build/windows build/linux
+          "$GODOT" --headless --path . --export-release "Windows Desktop" "$PWD/build/windows/PixelSpaceSandbox.exe"
+          "$GODOT" --headless --path . --export-release "Linux" "$PWD/build/linux/PixelSpaceSandbox.x86_64"
+          ls -la build/windows build/linux
+          test -f build/windows/PixelSpaceSandbox.exe
+          test -f build/linux/PixelSpaceSandbox.x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PixelSpaceSandbox-windows
+          path: build/windows/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PixelSpaceSandbox-linux
+          path: build/linux/
+          if-no-files-found: error
+
+  run-on-windows:
+    needs: test-and-export
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PixelSpaceSandbox-windows
+
+      - name: Start the game and check it renders
+        shell: pwsh
+        run: |
+          $log = Join-Path $PWD "run.log"
+          $game = Start-Process -FilePath .\PixelSpaceSandbox.exe -ArgumentList "--quit-after", "1800", "--log-file", $log -PassThru
+          $null = $game.Handle  # keeps the exit code readable after the process ends
+
+          # Best effort: a screenshot of the running game (hosted runners may have no desktop).
+          Start-Sleep -Seconds 15
+          try {
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bitmap.Save((Join-Path $PWD "windows-screenshot.png"))
+          } catch {
+            Write-Host "No screenshot: $_"
+          }
+
+          if (-not $game.WaitForExit(180000)) {
+            Stop-Process -Id $game.Id -Force
+            Get-Content $log -ErrorAction SilentlyContinue
+            throw "The game did not quit within 3 minutes (stuck, or showing an error dialog)."
+          }
+          Get-Content $log
+          if ($game.ExitCode -ne 0) { throw "The game exited with code $($game.ExitCode)." }
+          if (-not (Select-String -Path $log -Pattern "OpenGL API" -Quiet)) { throw "The renderer did not start." }
+          if (Select-String -Path $log -Pattern "SCRIPT ERROR" -CaseSensitive -Quiet) { throw "The game reported script errors." }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-run
+          path: |
+            run.log
+            windows-screenshot.png
+          if-no-files-found: ignore

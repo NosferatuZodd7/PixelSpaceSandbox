@@ -14,7 +14,7 @@
 | Headless test runner | ✅ | `tools/run_tests.sh` / `.ps1`; fails on any error or warning |
 | README, DESIGN, STATUS, CREDITS | ✅ | |
 | Git ignore | ✅ | |
-| Windows and Linux export presets | ✅ | Presets only; real builds are verified in milestone 9 |
+| Windows and Linux export presets | ✅ | Executables built on every push by GitHub Actions (`.github/workflows/build.yml`) |
 | Interface text in English and Portuguese | ✅ | `locale/ui.csv`; L switches language |
 | Data-driven key bindings | ✅ | `data/input_bindings.json`; rebinding UI in milestone 9 |
 | Title screen with seeded sky | ✅ | Dithered nebulae, twinkling stars; R makes a new sky |
