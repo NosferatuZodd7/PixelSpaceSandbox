@@ -14,6 +14,8 @@ const STAR_COUNT: int = 280
 const TWINKLE_RATE: float = 12.0
 
 @export var sky_seed: int = 7
+## How bright the nebulae get: 1 on the title screen, lower behind the game.
+@export_range(0.0, 1.0) var nebula_strength: float = 1.0
 
 var _nebula: ImageTexture
 var _stars: SkyGenerator.StarField = SkyGenerator.StarField.new()
@@ -52,8 +54,9 @@ func is_generating() -> bool:
 func _start_task(task_seed: int) -> void:
 	_pending_seed = task_seed
 	var ramps: Dictionary = _ramps
+	var strength: float = nebula_strength
 	_task_id = WorkerThreadPool.add_task(
-		func() -> void: _pending_image = SkyGenerator.nebula_image(task_seed, SIZE, ramps),
+		func() -> void: _pending_image = SkyGenerator.nebula_image(task_seed, SIZE, ramps, strength),
 		false,
 		"Generate sky"
 	)

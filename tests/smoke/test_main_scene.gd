@@ -46,14 +46,15 @@ func test_new_sky_request_while_generating_uses_the_latest_seed() -> void:
 	assert_false(seeds.has(11), "the superseded seed is skipped")
 
 
-func test_menu_offers_settings_and_quit() -> void:
+func test_menu_offers_new_system_settings_and_quit() -> void:
 	var new_system: Button = _main.get_node("UI/Root/Center/Menu/NewSystem")
 	var settings: Button = _main.get_node("UI/Root/Center/Menu/Settings")
 	var quit: Button = _main.get_node("UI/Root/Center/Menu/Quit")
-	assert_true(new_system.disabled, "new system waits for milestone 1")
+	assert_false(new_system.disabled, "new system enabled")
 	assert_false(settings.disabled, "settings enabled")
 	assert_false(quit.disabled, "quit enabled")
-	assert_true(settings.has_focus(), "keyboard starts on Settings")
+	assert_true(new_system.has_focus(), "keyboard starts on New system")
+	assert_true(new_system.pressed.is_connected(Callable(_main, &"start_new_system")), "New system opens the space scene")
 
 
 func test_settings_open_and_close_with_escape() -> void:

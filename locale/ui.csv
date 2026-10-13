@@ -1,11 +1,14 @@
 keys,en,pt_PT
 LANGUAGE_NAME,English,Português
 TITLE_TAGLINE,A universe sandbox in pixel art,"Um universo para brincar, em pixel art"
-MILESTONE_LABEL,Milestone 0 · project skeleton,Marco 0 · esqueleto do projeto
-MENU_NEW_SYSTEM_SOON,New system (soon),Novo sistema (em breve)
+MILESTONE_LABEL,Milestone 1 · a system on screen,Marco 1 · um sistema no ecrã
+MENU_NEW_SYSTEM,New system,Novo sistema
 MENU_SETTINGS,Settings,Definições
 MENU_QUIT,Quit,Sair
 MENU_BACK,Back,Voltar
+MENU_CONTINUE,Continue,Continuar
+MENU_TITLE,Title screen,Menu inicial
+PAUSE_TITLE,PAUSED,PAUSA
 SETTINGS_TITLE,SETTINGS,DEFINIÇÕES
 SETTING_LANGUAGE,Language,Idioma
 SETTING_DISPLAY,Display,Ecrã
@@ -14,3 +17,109 @@ DISPLAY_FULLSCREEN,Fullscreen,Ecrã inteiro
 SETTING_VSYNC,Vertical sync,Sincronização vertical
 VSYNC_ON,On,Ligada
 VSYNC_OFF,Off,Desligada
+PRESET_SOLAR_SYSTEM,Solar System,Sistema Solar
+BODY_SUN,Sun,Sol
+BODY_MERCURY,Mercury,Mercúrio
+BODY_VENUS,Venus,Vénus
+BODY_EARTH,Earth,Terra
+BODY_MOON,Moon,Lua
+BODY_MARS,Mars,Marte
+BODY_PHOBOS,Phobos,Fobos
+BODY_DEIMOS,Deimos,Deimos
+BODY_CERES,Ceres,Ceres
+BODY_JUPITER,Jupiter,Júpiter
+BODY_IO,Io,Io
+BODY_EUROPA,Europa,Europa
+BODY_GANYMEDE,Ganymede,Ganimedes
+BODY_CALLISTO,Callisto,Calisto
+BODY_SATURN,Saturn,Saturno
+BODY_MIMAS,Mimas,Mimas
+BODY_ENCELADUS,Enceladus,Encélado
+BODY_TETHYS,Tethys,Tétis
+BODY_DIONE,Dione,Dione
+BODY_RHEA,Rhea,Reia
+BODY_TITAN,Titan,Titã
+BODY_IAPETUS,Iapetus,Jápeto
+BODY_URANUS,Uranus,Úrano
+BODY_MIRANDA,Miranda,Miranda
+BODY_ARIEL,Ariel,Ariel
+BODY_UMBRIEL,Umbriel,Umbriel
+BODY_TITANIA,Titania,Titânia
+BODY_OBERON,Oberon,Oberon
+BODY_NEPTUNE,Neptune,Neptuno
+BODY_TRITON,Triton,Tritão
+BODY_PLUTO,Pluto,Plutão
+BODY_CHARON,Charon,Caronte
+BODY_ERIS,Eris,Éris
+KIND_STAR,Star,Estrela
+KIND_PLANET,Planet,Planeta
+KIND_DWARF_PLANET,Dwarf planet,Planeta anão
+KIND_MOON,Moon,Lua
+INSPECT_KIND,Type,Tipo
+INSPECT_MASS,Mass,Massa
+INSPECT_RADIUS,Radius,Raio
+INSPECT_LUMINOSITY,Luminosity,Luminosidade
+INSPECT_TEMPERATURE,Temperature,Temperatura
+INSPECT_HABITABLE_ZONE,Habitable zone,Zona habitável
+INSPECT_GRAVITY,Surface gravity,Gravidade
+INSPECT_STAR_DISTANCE,Distance to star,Distância à estrela
+INSPECT_LIGHT_TIME,Starlight takes,A luz demora
+INSPECT_PARENT_DISTANCE,Distance to planet,Distância ao planeta
+INSPECT_SEMI_MAJOR_AXIS,Mean orbit radius,Raio médio da órbita
+INSPECT_ECCENTRICITY,Eccentricity,Excentricidade
+INSPECT_PERIOD,Orbital period,Período orbital
+INSPECT_ROTATION,Rotation,Rotação
+INSPECT_AXIAL_TILT,Axial tilt,Inclinação do eixo
+INSPECT_IN_HABITABLE_ZONE,In habitable zone,Na zona habitável
+INSPECT_NOTE,Note,Nota
+INSPECT_APPROXIMATE_PHASE,approx. position,posição aproximada
+INSPECT_RETROGRADE,"%s, retrograde","%s, retrógrada"
+INSPECT_PIN,Pin,Fixar
+INSPECT_PINNED,Pinned,Fixa
+YES,Yes,Sim
+NO,No,Não
+UNIT_KM,%s km,%s km
+UNIT_AU,%s AU,%s UA
+UNIT_G,%s g,%s g
+UNIT_SUNS,%s × Sun,%s × Sol
+UNIT_EARTHS,%s × Earth,%s × Terra
+UNIT_KG,%s kg,%s kg
+DURATION_SECONDS,%s s,%s s
+DURATION_MINUTES,%s min,%s min
+DURATION_HOURS,%s h,%s h
+DURATION_DAY,%s day,%s dia
+DURATION_DAYS,%s days,%s dias
+DURATION_YEAR,%s year,%s ano
+DURATION_YEARS,%s years,%s anos
+DURATION_MILLION_YEAR,%s million years,%s milhão de anos
+DURATION_MILLION_YEARS,%s million years,%s milhões de anos
+DURATION_BILLION_YEARS,%s billion years,%s mil milhões de anos
+TIME_PAUSED,PAUSED  ·  Space to resume,PAUSA  ·  Espaço para continuar
+TIME_SLOW_MOTION,slow motion,câmara lenta
+TIME_REAL,real time,tempo real
+TIME_PER_SECOND,%s per second,%s por segundo
+YEAR_LABEL,YEAR %s,ANO %s
+MONTH_1,JAN,JAN
+MONTH_2,FEB,FEV
+MONTH_3,MAR,MAR
+MONTH_4,APR,ABR
+MONTH_5,MAY,MAI
+MONTH_6,JUN,JUN
+MONTH_7,JUL,JUL
+MONTH_8,AUG,AGO
+MONTH_9,SEP,SET
+MONTH_10,OCT,OUT
+MONTH_11,NOV,NOV
+MONTH_12,DEC,DEZ
+TAB_COSMOS,Cosmos,Cosmos
+TAB_TERRAIN,Terrain,Terreno
+TAB_WEATHER,Weather and nature,Clima e natureza
+TAB_LIFE,Life,Vida
+TAB_CIVILIZATIONS,Civilizations,Civilizações
+TAB_DISASTERS,Disasters,Desastres
+TAB_TOOLS,Tools,Ferramentas
+TAB_INSPECT,Inspect,Inspecionar
+TAB_COMING,These powers arrive in milestone %s.,Estes poderes chegam no marco %s.
+TAB_INSPECT_HINT,Click a body to inspect it · double-click or F to follow it,Clica num corpo para o inspecionar · duplo clique ou F para o seguir
+VIEW_FOLLOWING,Following %s,A seguir: %s
+VIEW_TRUE_SCALE,TRUE SCALE,ESCALA REAL

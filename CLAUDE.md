@@ -14,11 +14,12 @@ technical design in [docs/DESIGN.md](docs/DESIGN.md).
 - **Always ask before committing or pushing.**
 - Work milestone by milestone (see the brief). Each milestone ends playable,
   tested and documented; show what changed with screenshots
-  (`tools/screenshot.gd`).
+  (`tools/screenshot.gd`; for the game screen use
+  `--scene=res://scenes/space.tscn` with `--time`, `--follow`, `--select`,
+  `--zoom`, `--menu=open`).
 - Propose ideas that fit the pillars before building them.
-- Before starting milestone 1, present the plan for the cosmic layer
-  (including light and gravity fronts) in a few paragraphs and wait for the
-  go-ahead.
+- The cosmic-layer plan was approved before milestone 1; it is written up
+  in docs/DESIGN.md ("The cosmic layer").
 
 ## Rules for the code
 

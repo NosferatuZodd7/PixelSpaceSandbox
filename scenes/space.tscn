@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/space_screen.gd" id="1_space"]
+[ext_resource type="Script" path="res://src/view/starfield_background.gd" id="2_sky"]
+[ext_resource type="Script" path="res://src/view/space_view.gd" id="3_view"]
+[ext_resource type="Script" path="res://src/ui/time_counter.gd" id="4_counter"]
+[ext_resource type="Script" path="res://src/ui/toolbar.gd" id="5_toolbar"]
+[ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="6_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="7_settings"]
+
+[node name="Space" type="Node"]
+script = ExtResource("1_space")
+
+[node name="Sky" type="Node2D" parent="."]
+script = ExtResource("2_sky")
+sky_seed = 2026
+nebula_strength = 0.45
+
+[node name="View" type="Node2D" parent="."]
+script = ExtResource("3_view")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TimeCounter" type="VBoxContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 6.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("4_counter")
+
+[node name="Status" type="Label" parent="UI/Root"]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 208.0
+offset_bottom = 18.0
+theme_type_variation = &"KeyLabel"
+auto_translate_mode = 2
+
+[node name="Windows" type="Control" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Toolbar" type="PanelContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = -40.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("5_toolbar")
+
+[node name="Center" type="CenterContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PauseMenu" type="PanelContainer" parent="UI/Root/Center"]
+visible = false
+layout_mode = 2
+script = ExtResource("6_pause")
+
+[node name="SettingsPanel" parent="UI/Root/Center" instance=ExtResource("7_settings")]
+layout_mode = 2

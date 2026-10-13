@@ -70,7 +70,7 @@ colours.
 
 ```
 src/core/   palette, input bindings, player settings, the App autoload
-src/sim/    simulation: plain data + systems (from milestone 1)
+src/sim/    simulation: plain data + systems (bodies, orbits, clock, fronts)
 src/view/   presentation: nodes that draw the simulation
 src/ui/     screens, panels, theme
 data/       content in data files (JSON or Godot resources)
@@ -103,14 +103,94 @@ the same future. Rules from day one:
 
 The sky backdrop already follows these rules (`SkyGenerator`, tested).
 
-## Units and precision (from milestone 1)
+## Units and precision
 
 - Astronomical units, solar masses and years; `G = 4π² AU³/(M☉·yr²)`;
-  `c = 63,241.077 AU/yr`.
+  `c = 63,241.077 AU/yr` (`src/sim/units.gd`).
 - Godot's `Vector2` is **32-bit**. GDScript `float` is 64-bit, so simulation
   positions and velocities are stored as 64-bit floats in
   `PackedFloat64Array`s, never in `Vector2`. Drawing converts them to
-  camera-relative 32-bit positions (floating origin around the camera).
+  camera-relative 32-bit positions (floating origin around the camera), so
+  the view is exact from a star's surface to the edge of the system.
+
+## The cosmic layer (milestone 1)
+
+### State
+
+A `StarSystem` holds its `CelestialBody`s (star, planet, dwarf planet, moon:
+mass, radius, luminosity, albedo, rotation, pole, look, rings, orbit) and
+two packed arrays: positions and velocities, three 64-bit numbers per body,
+in the J2000 ecliptic frame centred on the star. Bodies are stored parents
+first. The screen only reads this state.
+
+### Motion "on rails"
+
+In milestone 1 every body follows a fixed orbit (`OrbitModel`), so positions
+are a pure function of time: exact at any speed and deterministic.
+
+- **Planets, Pluto:** `KeplerOrbit` with JPL's "Approximate Positions of the
+  Planets" elements and their drift per century (Table 1, fitted to
+  1800–2050). Drifts are frozen beyond ±50 centuries so orbits stay valid
+  for billions of years; the bodies keep moving.
+- **Ceres, Eris:** classical elements from JPL's small-body database.
+- **The Moon:** `LunarOrbit`, the Astronomical Almanac's low-precision lunar
+  theory (about 0.3°), so its phase is real on any date.
+- **Other moons:** real sizes, periods, eccentricities and inclinations,
+  in their planet's equatorial plane (from the IAU pole), so Uranus's moons
+  circle upright. Their place along the orbit is approximate (no ephemeris
+  was reachable from the build environment); the inspect window says so.
+- **Earth–Moon and Pluto–Charon:** the orbit is the pair's centre of mass;
+  each body is placed around it by mass.
+
+The game starts on the real current date. Tests check the result against
+the sky: Mars, Jupiter and Saturn oppositions within 0.15°, the total lunar
+eclipse of 2025-09-07 (Moon 179.6° from the Sun) and the total solar eclipse
+of 2024-04-08 (0.4°).
+
+Milestone 2 replaces rails with n-body gravity behind the same
+`Simulation.advance()`; bodies far from any disturbance may stay on rails.
+
+### Time
+
+One `SimClock` in years since J2000.0. Its speeds come from
+`data/time_speeds.json`: from ×0.01 through real time to a billion years per
+second; + and − step, the number keys jump to presets, Space pauses.
+
+### Light and gravity fronts
+
+`WaveFront` is in place (light or gravity, origin, emission time, speed c)
+with the arrival rule — a body feels a change once the front's radius passes
+its distance from the origin — and is tested: arrival after d/c within one
+sub-step, and a front is dropped once it has passed every body. Milestone 2
+creates fronts when the player changes the system:
+
+- light: each body keeps the light of the latest front that reached it;
+- gravity: in steady motion bodies pull towards where the others are now
+  (never towards delayed positions); changes travel as fronts; a removed
+  body leaves a gravity ghost on its last path until the news arrives.
+
+### Drawing
+
+- `SpaceCamera`: centre and pixels per AU, zoom towards the cursor with
+  easing, from 0.5 to 2×10⁷ px/AU.
+- Bodies are drawn larger than life (shrinking when zoomed out so they do
+  not crowd); **T** shows true scale. A moon appears once it is clear of its
+  planet's disc.
+- `BodySprite`: one shader (`planet_disc.gdshader`) wraps a small surface map
+  on a sphere, spins it, and lights it from the star with a dithered
+  terminator. Maps come from `data/body_looks.json` (styles and palette
+  colours) until milestone 5 brings real planet maps. Stars get a dithered
+  glow; rings are dithered ellipses in the planet's equator plane, the far
+  half behind the disc.
+- Orbits are dashed lines with fixed on-screen dashes; only the parts near
+  the screen are cut into dashes. Past 2,500 px of radius an orbit is drawn as
+  an exact arc around its body instead, so the line passes through it at any
+  zoom.
+- Names never cover bodies, each other, the counter or the toolbar.
+- The habitable zone is a dithered green band (`dither_ring.gdshader`) whose
+  fill fades out when it is much wider than the screen.
+- The star backdrop does not move when panning: real background stars are
+  so far away that crossing a whole system does not shift them.
 
 ## Testing
 
@@ -121,7 +201,10 @@ The sky backdrop already follows these rules (`SkyGenerator`, tested).
   extend `TestCase` (`tests/framework/base_test_case.gd`). A small runner of
   our own (`tests/run_tests.gd`) replaces a third-party test framework: it is
   about 100 lines and has no dependencies.
-- `tools/screenshot.gd` renders a scene to a PNG for reviews and docs.
+- `tools/screenshot.gd` renders a scene to a PNG for reviews and docs; for
+  the game screen it can set the date, select, follow, zoom and open the menu.
+- `tests/unit/test_architecture.gd` fails if anything under `src/sim/` uses
+  nodes, the palette, input or the renderer.
 
 ## Performance budget
 
@@ -129,10 +212,12 @@ The sky backdrop already follows these rules (`SkyGenerator`, tested).
 - 60 FPS at default settings on it; no frame may stall while a simulation
   step runs. Heavy work (the sky today; physics and planets later) runs on
   worker threads and is picked up when it is ready.
-- Measured: a 640×360 sky takes about 0.4 s on a worker thread (editor
-  build, 4-core cloud machine). When the camera starts to pan and zoom
-  (milestone 1) the backdrop becomes a parallax layer generated once per
-  system, not per frame.
+- Measured (editor build, 4-core cloud machine):
+  - a 640×360 sky takes about 0.4 s on a worker thread;
+  - the game screen costs 2–5 ms of CPU per frame at every zoom and speed
+    (simulation and layout 0.4 ms; the rest is drawing);
+  - opening the game screen takes about 0.2 s, mostly the 33 surface maps
+    (a candidate for a worker thread later).
 
 ## Decisions log
 
@@ -145,3 +230,9 @@ The sky backdrop already follows these rules (`SkyGenerator`, tested).
 | 5 | Default key bindings in `data/input_bindings.json`; rebinding stores only overrides | 2026-10 |
 | 6 | Simulation state in 64-bit packed arrays, not `Vector2` | 2026-10 |
 | 7 | Settings through a menu, not on-screen key hints; saved in `user://settings.cfg`, applied at once, with safe defaults for missing or broken files | 2026-10 |
+| 8 | Milestone 1 bodies move on rails (JPL elements and drifts, frozen beyond ±5,000 years); the game starts on the real date | 2026-10 |
+| 9 | The Moon from the Astronomical Almanac's low-precision theory; other moons with real orbits but approximate positions along them | 2026-10 |
+| 10 | Bodies drawn larger than life, shrinking when zoomed out; true scale on T | 2026-10 |
+| 11 | Orbits as fixed-size dashes, cut only near the screen; exact arcs around the body past 2,500 px | 2026-10 |
+| 12 | Gravity shown in g and masses as "× Earth": the pixel font has no superscripts | 2026-10 |
+| 13 | Body appearance from data (`data/body_looks.json`) until real planet maps (milestone 5) | 2026-10 |

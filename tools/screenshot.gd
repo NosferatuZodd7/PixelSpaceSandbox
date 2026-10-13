@@ -4,6 +4,10 @@ extends SceneTree
 ##
 ##   godot --path . --script res://tools/screenshot.gd -- --out=shot.png [--scene=res://...] [--seed=7] [--locale=pt_PT] [--settings=open] [--scale=3]
 ##
+## For the game scene (--scene=res://scenes/space.tscn) also:
+##   [--time=2026-10-13T12:00:00] [--select=earth] [--follow=earth] [--zoom=pixels per AU]
+##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
+##
 ## Saves the 640×360 frame, plus an enlarged copy (nearest-neighbour) when
 ## --scale is above 1.
 
@@ -28,15 +32,20 @@ func _capture() -> void:
 	var sky: StarfieldBackground = scene.get_node_or_null("Sky") as StarfieldBackground
 	if sky != null and args.has("seed"):
 		sky.sky_seed = int(args["seed"])
+	if args.has("time") and "start_time" in scene:
+		scene.set(&"start_time", Units.years_from_unix(Time.get_unix_time_from_datetime_string(args["time"])))
 	root.add_child(scene)
 	if args.get("settings", "") == "open" and scene.has_method(&"open_settings"):
 		scene.call(&"open_settings")
+	var view: SpaceView = scene.get_node_or_null("View") as SpaceView
+	if view != null:
+		_set_up_view(scene, view, args)
 
 	# Let the sky finish on its worker thread, then let a few frames render.
 	var deadline: int = Time.get_ticks_msec() + 20000
 	while sky != null and sky.is_generating() and Time.get_ticks_msec() < deadline:
 		await process_frame
-	for i: int in 10:
+	for i: int in int(args.get("wait", "10")):
 		await process_frame
 	await RenderingServer.frame_post_draw
 
@@ -50,6 +59,24 @@ func _capture() -> void:
 		image.save_png(big)
 		print("Saved %s" % big)
 	quit(0 if error == OK else 1)
+
+
+func _set_up_view(scene: Node, view: SpaceView, args: Dictionary[String, String]) -> void:
+	var system: StarSystem = view.simulation.system
+	if args.has("speed"):
+		view.simulation.clock.use_preset(args["speed"])
+	if args.has("zoom"):
+		view.camera.set_scale_now(float(args["zoom"]))
+	if args.has("follow"):
+		var followed: int = system.index_of(StringName(args["follow"]))
+		view.follow(followed)
+		view.camera.look_at(system.x(followed), system.y(followed))
+	if args.has("select"):
+		view.select(system.index_of(StringName(args["select"])))
+	if args.get("true-scale", "") == "on":
+		view.true_scale = true
+	if args.get("menu", "") == "open" and scene.has_method(&"open_menu"):
+		scene.call(&"open_menu")
 
 
 func _arguments() -> Dictionary[String, String]:

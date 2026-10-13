@@ -1,0 +1,32 @@
+{
+	"notes": "How each kind of body looks: a surface style and palette colours (darkest first). The generator in src/view/surface_maps.gd draws a small wrap-around map from these, which the planet discs spin and light.",
+	"looks": {
+		"sun": { "style": "star", "colors": ["star_k", "star_g", "star_f", "white"] },
+		"mercury": { "style": "rocky", "colors": ["crater", "rock", "regolith", "mountain"], "craters": 0.7 },
+		"venus": { "style": "clouds", "colors": ["desert", "sand", "star_g"] },
+		"earth": {
+			"style": "terran", "colors": ["ocean_deep", "ocean"],
+			"land": ["desert", "grass", "forest", "tundra"], "ice": "snow", "clouds": "white", "land_share": 0.34
+		},
+		"moon": { "style": "rocky", "colors": ["crater", "rock", "regolith", "mountain"], "craters": 0.8 },
+		"mars": { "style": "rocky", "colors": ["lava_dark", "dust", "desert", "sand"], "craters": 0.3, "ice": "snow" },
+		"rocky_dark": { "style": "rocky", "colors": ["void", "crater", "rock"], "craters": 0.6 },
+		"ceres": { "style": "rocky", "colors": ["crater", "rock", "regolith"], "craters": 0.6 },
+		"jupiter": { "style": "banded", "colors": ["dust", "desert", "sand", "star_f"], "bands": 9, "spot": "star_m" },
+		"saturn": { "style": "banded", "colors": ["desert", "sand", "star_g"], "bands": 7 },
+		"uranus": { "style": "banded", "colors": ["ocean_shallow", "ice"], "bands": 3 },
+		"neptune": { "style": "banded", "colors": ["ocean_deep", "ocean", "ocean_shallow"], "bands": 5, "spot": "space_navy" },
+		"io": { "style": "volcanic", "colors": ["desert", "sand", "star_g"], "spots": ["lava", "lava_dark"] },
+		"europa": { "style": "icy", "colors": ["ice", "snow", "white"], "cracks": "dust" },
+		"ganymede": { "style": "rocky", "colors": ["rock", "mountain", "regolith", "ice"], "craters": 0.4 },
+		"callisto": { "style": "rocky", "colors": ["crater", "rock", "mountain", "snow"], "craters": 0.9 },
+		"titan": { "style": "clouds", "colors": ["dust", "desert", "star_k"] },
+		"icy": { "style": "rocky", "colors": ["mountain", "ice", "snow"], "craters": 0.5 },
+		"icy_bright": { "style": "icy", "colors": ["ice", "snow", "white"], "cracks": "ocean_shallow" },
+		"iapetus": { "style": "two_tone", "colors": ["crater", "snow"] },
+		"triton": { "style": "icy", "colors": ["sand", "snow", "white"], "cracks": "star_m" },
+		"pluto": { "style": "rocky", "colors": ["lava_dark", "dust", "sand", "snow"], "craters": 0.2, "ice": "white" },
+		"charon": { "style": "rocky", "colors": ["rock", "regolith", "mountain"], "craters": 0.4, "ice": "lava_dark" },
+		"eris": { "style": "icy", "colors": ["ice", "snow", "white"], "cracks": "mountain" }
+	}
+}

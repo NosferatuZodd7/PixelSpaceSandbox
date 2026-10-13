@@ -1,0 +1,21 @@
+{
+	"notes": "Time speeds, in simulated seconds per real second, slowest first. + and - step through the ladder; the number keys jump to the presets.",
+	"ladder_seconds_per_second": [
+		0.01, 0.1, 1, 10, 60, 600, 3600, 21600, 86400, 604800, 2629800,
+		31557600, 315576000, 3155760000, 31557600000, 315576000000,
+		3155760000000, 31557600000000, 315576000000000, 3155760000000000, 31557600000000000
+	],
+	"presets": {
+		"1": 1,
+		"2": 60,
+		"3": 3600,
+		"4": 86400,
+		"5": 604800,
+		"6": 2629800,
+		"7": 31557600,
+		"8": 3155760000,
+		"9": 315576000000,
+		"0": 31557600000000
+	},
+	"default_seconds_per_second": 1
+}

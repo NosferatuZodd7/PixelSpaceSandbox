@@ -1,0 +1,1013 @@
+{
+	"id": "solar_system",
+	"name_key": "PRESET_SOLAR_SYSTEM",
+	"frame": "Heliocentric, J2000 ecliptic. Masses in kg, radii in km (volumetric mean), angles in degrees. jpl_approx orbits give [value at J2000, rate per century] for a (AU), e, i, L (mean longitude), peri (longitude of perihelion) and node (longitude of the ascending node). Moon elements are measured in the parent's equatorial plane (pole = [right ascension, declination], J2000).",
+	"sources": {
+		"jpl_approx_table1": "E. M. Standish, JPL Solar System Dynamics, Approximate Positions of the Planets, Table 1 (1800 AD to 2050 AD): https://ssd.jpl.nasa.gov/planets/approx_pos.html",
+		"nasa_fact_sheets": "NASA NSSDCA Planetary Fact Sheets (masses, radii, rotation, axial tilt): https://nssdc.gsfc.nasa.gov/planetary/factsheet/",
+		"aa_low_precision_moon": "The Astronomical Almanac, low-precision formulae for the Moon's geocentric coordinates",
+		"jpl_sbdb_ceres": "JPL Small-Body Database elements for 1 Ceres, epoch JD 2460000.5, as listed by TheSkyLive: https://www.theskylive.com/ceres-info",
+		"jpl_eris": "JPL osculating elements for 136199 Eris (2014 epoch), as listed by Johnston's Archive: https://johnstonsarchive.net/astro/astmoons/am-136199.html",
+		"jpl_satellites": "JPL Solar System Dynamics, Planetary Satellite Mean Elements and Physical Parameters (sizes, periods, eccentricities, inclinations): https://ssd.jpl.nasa.gov/sats/ ; positions along the orbit are approximate",
+		"iau_wgccre_2015": "IAU WGCCRE 2015 report (Archinal et al. 2018), directions of the planets' north poles"
+	},
+	"bodies": [
+		{
+			"id": "sun",
+			"name_key": "BODY_SUN",
+			"kind": "star",
+			"mass_kg": 1.98847e+30,
+			"radius_km": 695700.0,
+			"look": "sun",
+			"luminosity_lsun": 1.0,
+			"temperature_k": 5772.0,
+			"rotation_hours": 609.12,
+			"axial_tilt_deg": 7.25,
+			"pole": [
+				286.13,
+				63.87
+			]
+		},
+		{
+			"id": "mercury",
+			"name_key": "BODY_MERCURY",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 3.3011e+23,
+			"radius_km": 2439.7,
+			"look": "mercury",
+			"albedo": 0.068,
+			"rotation_hours": 1407.6,
+			"axial_tilt_deg": 0.034,
+			"pole": [
+				281.0103,
+				61.4155
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					0.38709927,
+					3.7e-07
+				],
+				"e": [
+					0.20563593,
+					1.906e-05
+				],
+				"i": [
+					7.00497902,
+					-0.00594749
+				],
+				"L": [
+					252.2503235,
+					149472.67411175
+				],
+				"peri": [
+					77.45779628,
+					0.16047689
+				],
+				"node": [
+					48.33076593,
+					-0.12534081
+				]
+			}
+		},
+		{
+			"id": "venus",
+			"name_key": "BODY_VENUS",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 4.8675e+24,
+			"radius_km": 6051.8,
+			"look": "venus",
+			"albedo": 0.77,
+			"rotation_hours": -5832.5,
+			"axial_tilt_deg": 177.36,
+			"pole": [
+				272.76,
+				67.16
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					0.72333566,
+					3.9e-06
+				],
+				"e": [
+					0.00677672,
+					-4.107e-05
+				],
+				"i": [
+					3.39467605,
+					-0.0007889
+				],
+				"L": [
+					181.9790995,
+					58517.81538729
+				],
+				"peri": [
+					131.60246718,
+					0.00268329
+				],
+				"node": [
+					76.67984255,
+					-0.27769418
+				]
+			}
+		},
+		{
+			"id": "earth",
+			"name_key": "BODY_EARTH",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 5.9722e+24,
+			"radius_km": 6371.0,
+			"look": "earth",
+			"albedo": 0.306,
+			"rotation_hours": 23.9345,
+			"axial_tilt_deg": 23.44,
+			"pole": [
+				0.0,
+				90.0
+			],
+			"barycenter_partner": "moon",
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					1.00000261,
+					5.62e-06
+				],
+				"e": [
+					0.01671123,
+					-4.392e-05
+				],
+				"i": [
+					-1.531e-05,
+					-0.01294668
+				],
+				"L": [
+					100.46457166,
+					35999.37244981
+				],
+				"peri": [
+					102.93768193,
+					0.32327364
+				],
+				"node": [
+					0.0,
+					0.0
+				]
+			}
+		},
+		{
+			"id": "moon",
+			"name_key": "BODY_MOON",
+			"kind": "moon",
+			"parent": "earth",
+			"mass_kg": 7.346e+22,
+			"radius_km": 1737.4,
+			"look": "moon",
+			"albedo": 0.11,
+			"rotation_hours": 655.72,
+			"axial_tilt_deg": 6.68,
+			"orbit": {
+				"model": "lunar_low_precision",
+				"source": "aa_low_precision_moon"
+			}
+		},
+		{
+			"id": "mars",
+			"name_key": "BODY_MARS",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 6.4171e+23,
+			"radius_km": 3389.5,
+			"look": "mars",
+			"albedo": 0.25,
+			"rotation_hours": 24.6229,
+			"axial_tilt_deg": 25.19,
+			"pole": [
+				317.68143,
+				52.8865
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					1.52371034,
+					1.847e-05
+				],
+				"e": [
+					0.0933941,
+					7.882e-05
+				],
+				"i": [
+					1.84969142,
+					-0.00813131
+				],
+				"L": [
+					-4.55343205,
+					19140.30268499
+				],
+				"peri": [
+					-23.94362959,
+					0.44441088
+				],
+				"node": [
+					49.55953891,
+					-0.29257343
+				]
+			}
+		},
+		{
+			"id": "phobos",
+			"name_key": "BODY_PHOBOS",
+			"kind": "moon",
+			"parent": "mars",
+			"mass_kg": 1.0659e+16,
+			"radius_km": 11.08,
+			"look": "rocky_dark",
+			"albedo": 0.07,
+			"rotation_hours": 7.6538,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 9376.0,
+				"e": 0.0151,
+				"i_deg": 1.075,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 40.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 0.31891023,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "deimos",
+			"name_key": "BODY_DEIMOS",
+			"kind": "moon",
+			"parent": "mars",
+			"mass_kg": 1476200000000000.0,
+			"radius_km": 6.2,
+			"look": "rocky_dark",
+			"albedo": 0.08,
+			"rotation_hours": 30.312,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 23463.2,
+				"e": 0.00033,
+				"i_deg": 1.788,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 215.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 1.263,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "ceres",
+			"name_key": "BODY_CERES",
+			"kind": "dwarf_planet",
+			"parent": "sun",
+			"mass_kg": 9.3835e+20,
+			"radius_km": 469.7,
+			"look": "ceres",
+			"albedo": 0.03,
+			"rotation_hours": 9.074,
+			"axial_tilt_deg": 4.0,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_sbdb_ceres",
+				"frame": "ecliptic",
+				"a_au": 2.76718174,
+				"e": 0.07881745,
+				"i_deg": 10.58634327,
+				"node_deg": 80.260148690589,
+				"arg_peri_deg": 73.470461544247,
+				"mean_anomaly_deg": 17.215651496148,
+				"epoch_jd": 2460000.5
+			}
+		},
+		{
+			"id": "jupiter",
+			"name_key": "BODY_JUPITER",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 1.89813e+27,
+			"radius_km": 69911.0,
+			"look": "jupiter",
+			"albedo": 0.343,
+			"rotation_hours": 9.925,
+			"axial_tilt_deg": 3.13,
+			"pole": [
+				268.056595,
+				64.495303
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					5.202887,
+					-0.00011607
+				],
+				"e": [
+					0.04838624,
+					-0.00013253
+				],
+				"i": [
+					1.30439695,
+					-0.00183714
+				],
+				"L": [
+					34.39644051,
+					3034.74612775
+				],
+				"peri": [
+					14.72847983,
+					0.21252668
+				],
+				"node": [
+					100.47390909,
+					0.20469106
+				]
+			}
+		},
+		{
+			"id": "io",
+			"name_key": "BODY_IO",
+			"kind": "moon",
+			"parent": "jupiter",
+			"mass_kg": 8.931938e+22,
+			"radius_km": 1821.6,
+			"look": "io",
+			"albedo": 0.63,
+			"rotation_hours": 42.4593,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 421700.0,
+				"e": 0.0041,
+				"i_deg": 0.05,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 10.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 1.769137786,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "europa",
+			"name_key": "BODY_EUROPA",
+			"kind": "moon",
+			"parent": "jupiter",
+			"mass_kg": 4.799844e+22,
+			"radius_km": 1560.8,
+			"look": "europa",
+			"albedo": 0.68,
+			"rotation_hours": 85.2283,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 671034.0,
+				"e": 0.0094,
+				"i_deg": 0.471,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 120.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 3.551181,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "ganymede",
+			"name_key": "BODY_GANYMEDE",
+			"kind": "moon",
+			"parent": "jupiter",
+			"mass_kg": 1.4819e+23,
+			"radius_km": 2634.1,
+			"look": "ganymede",
+			"albedo": 0.43,
+			"rotation_hours": 171.7093,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 1070412.0,
+				"e": 0.0013,
+				"i_deg": 0.204,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 250.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 7.15455296,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "callisto",
+			"name_key": "BODY_CALLISTO",
+			"kind": "moon",
+			"parent": "jupiter",
+			"mass_kg": 1.075938e+23,
+			"radius_km": 2410.3,
+			"look": "callisto",
+			"albedo": 0.22,
+			"rotation_hours": 400.5364,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 1882709.0,
+				"e": 0.0074,
+				"i_deg": 0.205,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 320.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 16.6890184,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "saturn",
+			"name_key": "BODY_SATURN",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 5.6834e+26,
+			"radius_km": 58232.0,
+			"look": "saturn",
+			"albedo": 0.342,
+			"rotation_hours": 10.656,
+			"axial_tilt_deg": 26.73,
+			"pole": [
+				40.589,
+				83.537
+			],
+			"rings": [
+				{
+					"inner_km": 74658.0,
+					"outer_km": 92000.0,
+					"color": "dust",
+					"density": 0.3
+				},
+				{
+					"inner_km": 92000.0,
+					"outer_km": 117580.0,
+					"color": "sand",
+					"density": 0.85
+				},
+				{
+					"inner_km": 122170.0,
+					"outer_km": 136775.0,
+					"color": "desert",
+					"density": 0.6
+				}
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					9.53667594,
+					-0.0012506
+				],
+				"e": [
+					0.05386179,
+					-0.00050991
+				],
+				"i": [
+					2.48599187,
+					0.00193609
+				],
+				"L": [
+					49.95424423,
+					1222.49362201
+				],
+				"peri": [
+					92.59887831,
+					-0.41897216
+				],
+				"node": [
+					113.66242448,
+					-0.28867794
+				]
+			}
+		},
+		{
+			"id": "mimas",
+			"name_key": "BODY_MIMAS",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 3.7493e+19,
+			"radius_km": 198.2,
+			"look": "icy",
+			"albedo": 0.6,
+			"rotation_hours": 22.6181,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 185539.0,
+				"e": 0.0196,
+				"i_deg": 1.574,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 30.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 0.942421959,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "enceladus",
+			"name_key": "BODY_ENCELADUS",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 1.08022e+20,
+			"radius_km": 252.1,
+			"look": "icy_bright",
+			"albedo": 0.81,
+			"rotation_hours": 32.8852,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 237948.0,
+				"e": 0.0047,
+				"i_deg": 0.009,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 95.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 1.370218,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "tethys",
+			"name_key": "BODY_TETHYS",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 6.17449e+20,
+			"radius_km": 531.1,
+			"look": "icy",
+			"albedo": 0.6,
+			"rotation_hours": 45.3072,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 294619.0,
+				"e": 0.0001,
+				"i_deg": 1.12,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 160.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 1.887802,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "dione",
+			"name_key": "BODY_DIONE",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 1.095452e+21,
+			"radius_km": 561.4,
+			"look": "icy",
+			"albedo": 0.55,
+			"rotation_hours": 65.686,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 377396.0,
+				"e": 0.0022,
+				"i_deg": 0.019,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 230.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 2.736915,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "rhea",
+			"name_key": "BODY_RHEA",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 2.306518e+21,
+			"radius_km": 763.8,
+			"look": "icy",
+			"albedo": 0.55,
+			"rotation_hours": 108.4371,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 527108.0,
+				"e": 0.0012583,
+				"i_deg": 0.345,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 300.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 4.518212,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "titan",
+			"name_key": "BODY_TITAN",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 1.3452e+23,
+			"radius_km": 2574.73,
+			"look": "titan",
+			"albedo": 0.27,
+			"rotation_hours": 382.68,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 1221870.0,
+				"e": 0.0288,
+				"i_deg": 0.34854,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 45.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 15.945,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "iapetus",
+			"name_key": "BODY_IAPETUS",
+			"kind": "moon",
+			"parent": "saturn",
+			"mass_kg": 1.805635e+21,
+			"radius_km": 734.5,
+			"look": "iapetus",
+			"albedo": 0.2,
+			"rotation_hours": 1903.716,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 3560820.0,
+				"e": 0.0286125,
+				"i_deg": 15.47,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 190.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 79.3215,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "uranus",
+			"name_key": "BODY_URANUS",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 8.681e+25,
+			"radius_km": 25362.0,
+			"look": "uranus",
+			"albedo": 0.3,
+			"rotation_hours": -17.24,
+			"axial_tilt_deg": 97.77,
+			"pole": [
+				257.311,
+				-15.175
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					19.18916464,
+					-0.00196176
+				],
+				"e": [
+					0.04725744,
+					-4.397e-05
+				],
+				"i": [
+					0.77263783,
+					-0.00242939
+				],
+				"L": [
+					313.23810451,
+					428.48202785
+				],
+				"peri": [
+					170.9542763,
+					0.40805281
+				],
+				"node": [
+					74.01692503,
+					0.04240589
+				]
+			}
+		},
+		{
+			"id": "miranda",
+			"name_key": "BODY_MIRANDA",
+			"kind": "moon",
+			"parent": "uranus",
+			"mass_kg": 6.4e+19,
+			"radius_km": 235.8,
+			"look": "icy",
+			"albedo": 0.32,
+			"rotation_hours": 33.9235,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 129390.0,
+				"e": 0.0013,
+				"i_deg": 4.232,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 70.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 1.413479,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "ariel",
+			"name_key": "BODY_ARIEL",
+			"kind": "moon",
+			"parent": "uranus",
+			"mass_kg": 1.251e+21,
+			"radius_km": 578.9,
+			"look": "icy",
+			"albedo": 0.53,
+			"rotation_hours": 60.4891,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 191020.0,
+				"e": 0.0012,
+				"i_deg": 0.26,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 140.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 2.520379,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "umbriel",
+			"name_key": "BODY_UMBRIEL",
+			"kind": "moon",
+			"parent": "uranus",
+			"mass_kg": 1.275e+21,
+			"radius_km": 584.7,
+			"look": "rocky_dark",
+			"albedo": 0.26,
+			"rotation_hours": 99.4602,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 266300.0,
+				"e": 0.0039,
+				"i_deg": 0.205,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 200.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 4.144177,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "titania",
+			"name_key": "BODY_TITANIA",
+			"kind": "moon",
+			"parent": "uranus",
+			"mass_kg": 3.4e+21,
+			"radius_km": 788.4,
+			"look": "icy",
+			"albedo": 0.35,
+			"rotation_hours": 208.9409,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 435910.0,
+				"e": 0.0011,
+				"i_deg": 0.34,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 280.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 8.705872,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "oberon",
+			"name_key": "BODY_OBERON",
+			"kind": "moon",
+			"parent": "uranus",
+			"mass_kg": 3.076e+21,
+			"radius_km": 761.4,
+			"look": "icy",
+			"albedo": 0.31,
+			"rotation_hours": 323.1177,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 583520.0,
+				"e": 0.0014,
+				"i_deg": 0.058,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 340.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 13.463239,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "neptune",
+			"name_key": "BODY_NEPTUNE",
+			"kind": "planet",
+			"parent": "sun",
+			"mass_kg": 1.02413e+26,
+			"radius_km": 24622.0,
+			"look": "neptune",
+			"albedo": 0.29,
+			"rotation_hours": 16.11,
+			"axial_tilt_deg": 28.32,
+			"pole": [
+				299.36,
+				43.46
+			],
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					30.06992276,
+					0.00026291
+				],
+				"e": [
+					0.00859048,
+					5.105e-05
+				],
+				"i": [
+					1.77004347,
+					0.00035372
+				],
+				"L": [
+					-55.12002969,
+					218.45945325
+				],
+				"peri": [
+					44.96476227,
+					-0.32241464
+				],
+				"node": [
+					131.78422574,
+					-0.00508664
+				]
+			}
+		},
+		{
+			"id": "triton",
+			"name_key": "BODY_TRITON",
+			"kind": "moon",
+			"parent": "neptune",
+			"mass_kg": 2.139e+22,
+			"radius_km": 1353.4,
+			"look": "triton",
+			"albedo": 0.76,
+			"rotation_hours": 141.0445,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 354759.0,
+				"e": 1.6e-05,
+				"i_deg": 156.885,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 100.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 5.876854,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "pluto",
+			"name_key": "BODY_PLUTO",
+			"kind": "dwarf_planet",
+			"parent": "sun",
+			"mass_kg": 1.303e+22,
+			"radius_km": 1188.3,
+			"look": "pluto",
+			"albedo": 0.72,
+			"rotation_hours": -153.2935,
+			"axial_tilt_deg": 122.53,
+			"pole": [
+				132.993,
+				-6.163
+			],
+			"barycenter_partner": "charon",
+			"orbit": {
+				"model": "jpl_approx",
+				"source": "jpl_approx_table1",
+				"a": [
+					39.48211675,
+					-0.00031596
+				],
+				"e": [
+					0.2488273,
+					5.17e-05
+				],
+				"i": [
+					17.14001206,
+					4.818e-05
+				],
+				"L": [
+					238.92903833,
+					145.20780515
+				],
+				"peri": [
+					224.06891629,
+					-0.04062942
+				],
+				"node": [
+					110.30393684,
+					-0.01183482
+				]
+			}
+		},
+		{
+			"id": "charon",
+			"name_key": "BODY_CHARON",
+			"kind": "moon",
+			"parent": "pluto",
+			"mass_kg": 1.586e+21,
+			"radius_km": 606.0,
+			"look": "charon",
+			"albedo": 0.25,
+			"rotation_hours": 153.2935,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_satellites",
+				"frame": "parent_equator",
+				"a_km": 19591.0,
+				"e": 0.0002,
+				"i_deg": 0.08,
+				"node_deg": 0.0,
+				"arg_peri_deg": 0.0,
+				"mean_anomaly_deg": 0.0,
+				"epoch_jd": 2451545.0,
+				"period_days": 6.3872273,
+				"approximate_phase": true
+			}
+		},
+		{
+			"id": "eris",
+			"name_key": "BODY_ERIS",
+			"kind": "dwarf_planet",
+			"parent": "sun",
+			"mass_kg": 1.6466e+22,
+			"radius_km": 1163.0,
+			"look": "eris",
+			"albedo": 0.8,
+			"rotation_hours": 378.9,
+			"orbit": {
+				"model": "elements",
+				"source": "jpl_eris",
+				"frame": "ecliptic",
+				"a_au": 67.78,
+				"e": 0.440682,
+				"i_deg": 44.04451,
+				"node_deg": 35.95312,
+				"arg_peri_deg": 150.9766,
+				"mean_anomaly_deg": 204.165,
+				"epoch_jd": 2456800.5
+			}
+		}
+	]
+}

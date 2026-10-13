@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/settings_panel.gd" id="1_settings"]
+
+[node name="SettingsPanel" type="PanelContainer"]
+visible = false
+custom_minimum_size = Vector2(296, 0)
+script = ExtResource("1_settings")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "SETTINGS_TITLE"
+horizontal_alignment = 1
+
+[node name="Rows" type="VBoxContainer" parent="Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Back" type="Button" parent="Content"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "MENU_BACK"

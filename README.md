@@ -7,9 +7,9 @@ habitable worlds grow life and civilizations that reach for space.
 
 Made with Godot 4 (Compatibility renderer) to run smoothly on weak PCs.
 
-**Status:** milestone 0 (project skeleton) — see [docs/STATUS.md](docs/STATUS.md).
+**Status:** milestone 1 (a system on screen) — see [docs/STATUS.md](docs/STATUS.md).
 
-![Title screen](docs/images/milestone0_title.png)
+![The Solar System on screen](docs/images/milestone1_space.png)
 
 ## Running the game
 
@@ -20,6 +20,23 @@ Made with Godot 4 (Compatibility renderer) to run smoothly on weak PCs.
 The title screen has a menu (mouse, or arrows + Enter, Esc to go back).
 **Settings** changes the language, window or fullscreen, and vertical sync;
 choices are saved between sessions. **F11** toggles fullscreen anywhere.
+
+**New system** opens the Solar System on today's date. In the game:
+
+| Key / mouse | Does |
+| --- | --- |
+| Mouse wheel, PageUp/PageDown | Zoom (towards the cursor) |
+| Middle or right drag, WASD, arrows | Move the view |
+| Click a body | Inspect it (pin the window to keep it) |
+| Double-click, F | Follow the selected body |
+| H | Back to the star |
+| T | True scale on/off |
+| Space | Pause |
+| + / − | Faster / slower |
+| 1 … 0 | Speeds from real time to a million years per second |
+| F1 … F8 | Toolbar tabs |
+| Tab | Hide or show the interface |
+| Esc | Pause menu |
 
 ## Test builds
 

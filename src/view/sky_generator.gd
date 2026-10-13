@@ -70,8 +70,9 @@ static func default_ramps() -> Dictionary:
 	}
 
 
-## Renders the nebula backdrop as an RGB8 image of the given size.
-static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary) -> Image:
+## Renders the nebula backdrop as an RGB8 image of the given size. strength
+## scales how bright the nebulae get (1 on the title, lower behind the game).
+static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary, strength: float = 1.0) -> Image:
 	var background: PackedColorArray = ramps["background"]
 	var purple: PackedColorArray = ramps["nebula"]
 	var blue: PackedColorArray = ramps["nebula_blue"]
@@ -114,9 +115,9 @@ static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary) -> Im
 			var bend: float = (warp[i] / 255.0 - 0.5) * warp_amount
 
 			var d1: float = (x - center1.x) * normal1.x + (y - center1.y) * normal1.y + bend
-			var v1: float = clampf(exp(-d1 * d1 * inv_width1_sq) * (0.1 + 1.15 * cloud) - 0.12, 0.0, 1.0)
+			var v1: float = clampf((exp(-d1 * d1 * inv_width1_sq) * (0.1 + 1.15 * cloud) - 0.12) * strength, 0.0, 1.0)
 			var d2: float = (x - center2.x) * normal2.x + (y - center2.y) * normal2.y - bend * 0.6
-			var v2: float = clampf(exp(-d2 * d2 * inv_width2_sq) * (0.2 + 0.9 * cloud) - 0.2, 0.0, 1.0)
+			var v2: float = clampf((exp(-d2 * d2 * inv_width2_sq) * (0.2 + 0.9 * cloud) - 0.2) * strength, 0.0, 1.0)
 
 			var c: Color
 			var level: int = _dither(v1 * purple_top, threshold)
