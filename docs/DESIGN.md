@@ -69,7 +69,7 @@ colours.
 ## Code layout and layers
 
 ```
-src/core/   palette, input bindings, the App autoload
+src/core/   palette, input bindings, player settings, the App autoload
 src/sim/    simulation: plain data + systems (from milestone 1)
 src/view/   presentation: nodes that draw the simulation
 src/ui/     screens, panels, theme
@@ -144,3 +144,4 @@ The sky backdrop already follows these rules (`SkyGenerator`, tested).
 | 4 | Interface text in a CSV (`locale/ui.csv`), English and Portuguese (Portugal) | 2026-10 |
 | 5 | Default key bindings in `data/input_bindings.json`; rebinding stores only overrides | 2026-10 |
 | 6 | Simulation state in 64-bit packed arrays, not `Vector2` | 2026-10 |
+| 7 | Settings through a menu, not on-screen key hints; saved in `user://settings.cfg`, applied at once, with safe defaults for missing or broken files | 2026-10 |

@@ -1,10 +1,16 @@
 keys,en,pt_PT
+LANGUAGE_NAME,English,Português
 TITLE_TAGLINE,A universe sandbox in pixel art,"Um universo para brincar, em pixel art"
 MILESTONE_LABEL,Milestone 0 · project skeleton,Marco 0 · esqueleto do projeto
-SEED_LABEL,Seed %d,Semente %d
-LANGUAGE_NAME,English,Português
-HINT_NEW_SKY,new sky,novo céu
-HINT_LANGUAGE,language,idioma
-HINT_PALETTE,palette,paleta
-HINT_FULLSCREEN,fullscreen,ecrã inteiro
-HINT_QUIT,quit,sair
+MENU_NEW_SYSTEM_SOON,New system (soon),Novo sistema (em breve)
+MENU_SETTINGS,Settings,Definições
+MENU_QUIT,Quit,Sair
+MENU_BACK,Back,Voltar
+SETTINGS_TITLE,SETTINGS,DEFINIÇÕES
+SETTING_LANGUAGE,Language,Idioma
+SETTING_DISPLAY,Display,Ecrã
+DISPLAY_WINDOWED,Window,Janela
+DISPLAY_FULLSCREEN,Fullscreen,Ecrã inteiro
+SETTING_VSYNC,Vertical sync,Sincronização vertical
+VSYNC_ON,On,Ligada
+VSYNC_OFF,Off,Desligada

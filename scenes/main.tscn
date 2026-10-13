@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/title_screen.gd" id="1_title"]
 [ext_resource type="Script" path="res://src/view/starfield_background.gd" id="2_sky"]
-[ext_resource type="Script" path="res://src/ui/palette_strip.gd" id="3_palette"]
+[ext_resource type="Script" path="res://src/ui/settings_panel.gd" id="3_settings"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_title")
@@ -21,52 +21,12 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="SeedLabel" type="Label" parent="UI/Root"]
-layout_mode = 1
-offset_left = 8.0
-offset_top = 6.0
-offset_right = 208.0
-offset_bottom = 18.0
-theme_type_variation = &"DimLabel"
-auto_translate_mode = 2
-text = "Seed 7"
-
-[node name="VersionLabel" type="Label" parent="UI/Root"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -248.0
-offset_top = 6.0
-offset_right = -8.0
-offset_bottom = 18.0
-grow_horizontal = 0
-theme_type_variation = &"DimLabel"
-auto_translate_mode = 2
-text = "v0.0.0"
-horizontal_alignment = 2
-
-[node name="LanguageLabel" type="Label" parent="UI/Root"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -248.0
-offset_top = 18.0
-offset_right = -8.0
-offset_bottom = 30.0
-grow_horizontal = 0
-theme_type_variation = &"DimLabel"
-auto_translate_mode = 2
-text = "English"
-horizontal_alignment = 2
-
 [node name="Title" type="Label" parent="UI/Root"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 112.0
-offset_bottom = 130.0
+offset_top = 96.0
+offset_bottom = 114.0
 grow_horizontal = 2
 theme_type_variation = &"TitleLabel"
 auto_translate_mode = 2
@@ -77,8 +37,8 @@ horizontal_alignment = 1
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 138.0
-offset_bottom = 150.0
+offset_top = 122.0
+offset_bottom = 134.0
 grow_horizontal = 2
 text = "TITLE_TAGLINE"
 horizontal_alignment = 1
@@ -87,35 +47,82 @@ horizontal_alignment = 1
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 152.0
-offset_bottom = 164.0
+offset_top = 136.0
+offset_bottom = 148.0
 grow_horizontal = 2
 theme_type_variation = &"DimLabel"
 text = "MILESTONE_LABEL"
 horizontal_alignment = 1
 
-[node name="PaletteStrip" type="Control" parent="UI/Root"]
+[node name="Center" type="CenterContainer" parent="UI/Root"]
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -127.0
-offset_top = 196.0
-offset_right = 126.0
-offset_bottom = 227.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 156.0
+offset_bottom = -20.0
 grow_horizontal = 2
-script = ExtResource("3_palette")
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="Hints" type="HBoxContainer" parent="UI/Root"]
+[node name="Menu" type="VBoxContainer" parent="UI/Root/Center"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="NewSystem" type="Button" parent="UI/Root/Center/Menu"]
+layout_mode = 2
+disabled = true
+text = "MENU_NEW_SYSTEM_SOON"
+
+[node name="Settings" type="Button" parent="UI/Root/Center/Menu"]
+layout_mode = 2
+text = "MENU_SETTINGS"
+
+[node name="Quit" type="Button" parent="UI/Root/Center/Menu"]
+layout_mode = 2
+text = "MENU_QUIT"
+
+[node name="SettingsPanel" type="PanelContainer" parent="UI/Root/Center"]
+visible = false
+custom_minimum_size = Vector2(296, 0)
+layout_mode = 2
+script = ExtResource("3_settings")
+
+[node name="Content" type="VBoxContainer" parent="UI/Root/Center/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="UI/Root/Center/SettingsPanel/Content"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "SETTINGS_TITLE"
+horizontal_alignment = 1
+
+[node name="Rows" type="VBoxContainer" parent="UI/Root/Center/SettingsPanel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Back" type="Button" parent="UI/Root/Center/SettingsPanel/Content"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "MENU_BACK"
+
+[node name="VersionLabel" type="Label" parent="UI/Root"]
 layout_mode = 1
-anchors_preset = 12
+anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -22.0
-offset_bottom = -10.0
-grow_horizontal = 2
+offset_left = -248.0
+offset_top = -18.0
+offset_right = -8.0
+offset_bottom = -6.0
+grow_horizontal = 0
 grow_vertical = 0
-mouse_filter = 2
-theme_override_constants/separation = 3
-alignment = 1
+theme_type_variation = &"DimLabel"
+auto_translate_mode = 2
+text = "v0.0.0"
+horizontal_alignment = 2

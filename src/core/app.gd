@@ -1,31 +1,17 @@
 extends Node
-## Autoload "App": global setup that every screen relies on, and the global
-## shortcuts (fullscreen) that work everywhere.
+## Autoload "App": global setup every screen relies on (key bindings, the
+## player's settings) and the shortcuts that work everywhere.
+
+var settings: GameSettings = GameSettings.new()
 
 
 func _ready() -> void:
 	InputBindings.apply()
+	settings.read()
+	settings.apply()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"toggle_fullscreen"):
-		toggle_fullscreen()
+		settings.change(&"fullscreen", not settings.fullscreen)
 		get_viewport().set_input_as_handled()
-
-
-func toggle_fullscreen() -> void:
-	var mode: DisplayServer.WindowMode = DisplayServer.window_get_mode()
-	if mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-
-
-## Switches the interface to the next loaded language.
-func cycle_language() -> void:
-	var locales: PackedStringArray = TranslationServer.get_loaded_locales()
-	if locales.is_empty():
-		return
-	locales.sort()
-	var current: int = locales.find(TranslationServer.get_locale())
-	TranslationServer.set_locale(locales[(current + 1) % locales.size()])

@@ -2,7 +2,7 @@ extends SceneTree
 ## Renders a scene and saves a screenshot, for docs and for reviewing changes.
 ## Needs a real renderer (not --headless):
 ##
-##   godot --path . --script res://tools/screenshot.gd -- --out=shot.png [--scene=res://...] [--seed=7] [--locale=pt_PT] [--palette=on|off] [--scale=3]
+##   godot --path . --script res://tools/screenshot.gd -- --out=shot.png [--scene=res://...] [--seed=7] [--locale=pt_PT] [--settings=open] [--scale=3]
 ##
 ## Saves the 640×360 frame, plus an enlarged copy (nearest-neighbour) when
 ## --scale is above 1.
@@ -19,16 +19,18 @@ func _capture() -> void:
 	var out: String = args.get("out", "user://screenshot.png")
 	InputBindings.apply()
 	if args.has("locale"):
-		TranslationServer.set_locale(args["locale"])
+		# The App autoload is not a global name yet when this script compiles.
+		var settings: GameSettings = root.get_node("App").get(&"settings")
+		settings.locale = args["locale"]
+		settings.apply()
 
 	var scene: Node = (load(args.get("scene", DEFAULT_SCENE)) as PackedScene).instantiate()
 	var sky: StarfieldBackground = scene.get_node_or_null("Sky") as StarfieldBackground
 	if sky != null and args.has("seed"):
 		sky.sky_seed = int(args["seed"])
 	root.add_child(scene)
-	var palette: Control = scene.get_node_or_null("UI/Root/PaletteStrip") as Control
-	if palette != null and args.has("palette"):
-		palette.visible = args["palette"] == "on"
+	if args.get("settings", "") == "open" and scene.has_method(&"open_settings"):
+		scene.call(&"open_settings")
 
 	# Let the sky finish on its worker thread, then let a few frames render.
 	var deadline: int = Time.get_ticks_msec() + 20000

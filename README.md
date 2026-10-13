@@ -17,8 +17,9 @@ Made with Godot 4 (Compatibility renderer) to run smoothly on weak PCs.
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** to run.
 
-Keys on the title screen: **R** new sky, **L** language, **P** palette,
-**F11** fullscreen, **Esc** quit.
+The title screen has a menu (mouse, or arrows + Enter, Esc to go back).
+**Settings** changes the language, window or fullscreen, and vertical sync;
+choices are saved between sessions. **F11** toggles fullscreen anywhere.
 
 ## Test builds
 
