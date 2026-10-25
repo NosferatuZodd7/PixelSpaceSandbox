@@ -313,6 +313,29 @@ func test_bodies_on_a_collision_course_are_reported() -> void:
 		assert_true(s.time < 0.2, "%s: soon after they meet (%s)" % [kernel_name, s.time])
 
 
+func test_a_close_pass_inside_the_roche_limit_is_reported() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = _sun_and_earth()
+		# A Moon-like moon passing the Earth 9,000 km out, inside its
+		# 9,500 km Roche limit but well clear of the surface.
+		var moon_mass: float = 0.0123 * s.mass[1]
+		var gap: float = Units.au_from_km(9000.0)
+		var speed: float = 10.0 * Units.YEAR_SECONDS / Units.AU_KM
+		s.add_body(1.0 + gap, -0.003, 0.0, 0.0, s.vel[4] + speed, 0.0, moon_mass, Units.au_from_km(1737.0), Gravity.Mode.FREE, -1)
+		var result: Dictionary = {}
+		for k: int in 40:
+			result = _advance(kernel, s, 0.0005 * (k + 1))
+			if int(result["status"]) == Gravity.Status.EVENTS:
+				break
+		var pair: PackedInt32Array = result.get("collisions", PackedInt32Array())
+		assert_eq(pair.size(), 2, "%s: the close pass is reported" % kernel_name)
+		var gaps: PackedFloat64Array = result.get("collision_gaps", PackedFloat64Array())
+		assert_eq(gaps.size(), 1, "%s: with how close they came" % kernel_name)
+		if gaps.size() == 1:
+			assert_true(Units.km_from_au(gaps[0]) > 8000.0 and Units.km_from_au(gaps[0]) < 9500.0, "%s: about 9,000 km (%s)" % [kernel_name, Units.km_from_au(gaps[0])])
+
+
 func test_a_particle_striking_a_planet_is_an_impact() -> void:
 	for kernel_name: String in _kernels():
 		var kernel: Object = _kernels()[kernel_name]

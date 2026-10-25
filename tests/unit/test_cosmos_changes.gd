@@ -280,3 +280,14 @@ func test_the_moons_of_a_removed_planet_circle_its_star() -> void:
 	simulation.remove_body(system.index_of(&"mars"), "FRONT_REMOVED")
 	assert_eq(simulation.parent_of(system.index_of(&"phobos")), 0, "Phobos now circles the Sun")
 	assert_eq(simulation.dominant_body(-2.0, 1.0, 0.0), 0, "and does not take over the inner system")
+
+
+func test_a_point_on_screen_lies_in_the_plane_of_what_it_would_circle() -> void:
+	var simulation: Simulation = _simulation()
+	var system: StarSystem = simulation.system
+	var earth: int = system.index_of(&"earth")
+	var point: PackedFloat64Array = simulation.point_in_plane(system.x(earth) + 6e-5, system.y(earth))
+	assert_eq(point[2], system.z(earth), "at the Earth's height, which is not the ecliptic's (the Moon pulls it off)")
+	assert_eq(simulation.dominant_body(point[0], point[1], point[2]), earth)
+	point = simulation.point_in_plane(3.0, 0.0)
+	assert_eq(point[2], system.z(0), "in the asteroid belt, at the Sun's height")

@@ -38,6 +38,13 @@ var _delta_mass: PackedFloat64Array = []
 var _reach2: PackedFloat64Array = []
 var _new_acc: PackedFloat64Array = []
 var _prev: PackedFloat64Array = []
+## Closest approach of each pair reported this advance (AU).
+var _gaps: PackedFloat64Array = []
+## Per body, for Roche limits: its mass once all news has arrived, its
+## cube root, and radius × (TIDAL_FACTOR / mass)^(1/3) (0 when massless).
+var _final_mass: PackedFloat64Array = []
+var _mass_root: PackedFloat64Array = []
+var _tidal_scale: PackedFloat64Array = []
 var _placed: PackedByteArray = []
 var _queue: Array[int] = []
 var _queue_head: int = 0
@@ -53,6 +60,7 @@ var _slept: int = 0
 func advance(s: NBodyState, t_target: float, max_steps: int, max_usec: int) -> Dictionary:
 	var started: int = Time.get_ticks_usec()
 	var collisions: PackedInt32Array = PackedInt32Array()
+	_gaps = PackedFloat64Array()
 	var impacts: PackedInt32Array = PackedInt32Array()
 	var impact_data: PackedFloat64Array = PackedFloat64Array()
 	var status: int = Gravity.Status.REACHED
@@ -60,6 +68,7 @@ func advance(s: NBodyState, t_target: float, max_steps: int, max_usec: int) -> D
 	_woken = 0
 	_slept = 0
 	_prepare(s)
+	_prepare_tides(s)
 	_build_queue(s, t_target)
 	while true:
 		var h: float = Gravity.step_size(s.level)
@@ -78,7 +87,7 @@ func advance(s: NBodyState, t_target: float, max_steps: int, max_usec: int) -> D
 				status = Gravity.Status.BUDGET
 			break
 	return {
-		"status": status, "steps": steps, "collisions": collisions, "impacts": impacts,
+		"status": status, "steps": steps, "collisions": collisions, "collision_gaps": _gaps, "impacts": impacts,
 		"impact_data": impact_data, "woken": _woken, "slept": _slept,
 	}
 
@@ -556,7 +565,7 @@ func _sweep_bodies(s: NBodyState, collisions: PackedInt32Array) -> void:
 			if mj == GHOST or mj == GONE or (mj == FREE and j < i):
 				continue
 			var bj: int = j * 3
-			var reach: float = s.radius[i] + s.radius[j]
+			var reach: float = maxf(s.radius[i] + s.radius[j], _tidal_limit(i, j))
 			var d1x: float = pos[bi] - pos[bj]
 			var d1y: float = pos[bi + 1] - pos[bj + 1]
 			var d1z: float = pos[bi + 2] - pos[bj + 2]
@@ -572,9 +581,36 @@ func _sweep_bodies(s: NBodyState, collisions: PackedInt32Array) -> void:
 			if closest[0] < reach * reach:
 				collisions.append(i)
 				collisions.append(j)
+				_gaps.append(sqrt(closest[0]))
 				hit[i] = 1
 				hit[j] = 1
 				break
+
+
+## Works out, once per advance, what Roche limits need: the masses every
+## body will have once all news has arrived (a body just placed tears and
+## is torn by its full mass).
+func _prepare_tides(s: NBodyState) -> void:
+	var n: int = s.mass.size()
+	_final_mass = s.mass.duplicate()
+	for d: int in s.delta_body.size():
+		_final_mass[s.delta_body[d]] += s.delta_mass[d]
+	_mass_root.resize(n)
+	_tidal_scale.resize(n)
+	for i: int in n:
+		var m: float = _final_mass[i]
+		_mass_root[i] = pow(m, 1.0 / 3.0) if m > 0.0 else 0.0
+		_tidal_scale[i] = s.radius[i] * pow(Gravity.TIDAL_FACTOR / m, 1.0 / 3.0) if m > 0.0 else 0.0
+
+
+## How close the lighter of two bodies can come to the heavier before the
+## tides tear it apart (0 when neither is heavier or the lighter is massless).
+func _tidal_limit(i: int, j: int) -> float:
+	var light: int = i if _final_mass[i] < _final_mass[j] else j
+	var heavy: int = j if light == i else i
+	if _final_mass[light] <= 0.0 or _final_mass[heavy] <= _final_mass[light]:
+		return 0.0
+	return _tidal_scale[light] * _mass_root[heavy]
 
 
 func _touches_body(s: NBodyState, x: float, y: float, z: float, skip: int) -> bool:

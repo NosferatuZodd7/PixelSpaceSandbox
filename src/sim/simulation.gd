@@ -28,6 +28,10 @@ var max_usec_per_frame: int = 6000
 ## True when the last frame ran out of budget (the game runs slower than
 ## the chosen speed).
 var lagging: bool = false
+## What happened as time ran, oldest first, for notifications: for now
+## {"kind": "merge", "body": survivor, "other": absorbed, "time": years}.
+## Whoever reads them may clear the list.
+var events: Array[Dictionary] = []
 ## Counts the changes made to the system (places, removals, flings), so
 ## views know when to redraw what they cache.
 var changes: int = 0
@@ -102,8 +106,7 @@ func advance(real_seconds: float) -> void:
 		if not clock.paused:
 			state.rails_tau = clock.speed() * FRAME_SECONDS / TARGET_STEPS / Gravity.ETA / Units.YEAR_SECONDS
 			var target: float = clock.time + real_seconds * clock.years_per_second()
-			var result: Dictionary = _core.call(&"advance", state, target, max_steps_per_frame, max_usec_per_frame)
-			lagging = int(result["status"]) == Gravity.Status.BUDGET
+			lagging = not _run_to(target, max_steps_per_frame, max_usec_per_frame)
 			clock.time = state.time if lagging else target
 		_core.call(&"preview", state, clock.time)
 		_show_view()
@@ -175,36 +178,94 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 	var light: float = state.final_light(index)
 	var front: int = emit_front(state.pos[b], state.pos[b + 1], state.pos[b + 2], light > 0.0, true, label_key, index)
 	if front >= 0:
-		var original: CelestialBody = system.body(index)
-		var ghost_body: CelestialBody = CelestialBody.new()
-		ghost_body.id = StringName("%s_ghost_%d" % [original.id, state.body_count()])
-		ghost_body.name_key = original.name_key
-		ghost_body.name_number = original.name_number
-		ghost_body.kind = original.kind
-		ghost_body.mass = original.mass
-		ghost_body.radius = original.radius
-		ghost_body.luminosity = original.luminosity
-		ghost_body.temperature = original.temperature
-		ghost_body.look = original.look
-		var ghost: int = system.add(ghost_body)
-		state.add_body(
-			state.pos[b], state.pos[b + 1], state.pos[b + 2], state.vel[b], state.vel[b + 1], state.vel[b + 2],
-			state.mass[index], state.radius[index], Gravity.Mode.GHOST, -1
-		)
-		state.light_base[ghost] = state.light_base[index]
-		# The ghost is the body on its old path, as the far side of the system
-		# still knows it: with its changes still on their way, until the news
-		# that it changed course arrives.
-		_move_changes(index, ghost)
-		_change_mass(ghost, front, -mass)
-		_change_light(ghost, front, -light)
-		state.mass[index] = 0.0
-		state.light_base[index] = 0.0
+		_leave_ghost(index, front)
 		_change_mass(index, front, mass)
 		_change_light(index, front, light)
 	state.vel[b] = vx
 	state.vel[b + 1] = vy
 	state.vel[b + 2] = vz
+	_after_change(front)
+
+
+## Two bodies that touch become one. The heavier keeps its name (a black
+## hole always does) and takes the other's mass and momentum, at their
+## centre of mass; the volumes add up, a black hole's horizon grows with its
+## mass, and two stars make one brighter by the mass-luminosity law. Where
+## the news has not arrived, both pull on as ghosts along their old paths,
+## so the far field does not jump. Returns the survivor.
+func merge(first: int, second: int, label_key: String) -> int:
+	leave_pristine()
+	var big: int = first
+	var small: int = second
+	var first_hole: bool = system.body(first).kind == CelestialBody.Kind.BLACK_HOLE
+	var second_hole: bool = system.body(second).kind == CelestialBody.Kind.BLACK_HOLE
+	if (second_hole and not first_hole) or (second_hole == first_hole and state.final_mass(second) > state.final_mass(first)):
+		big = second
+		small = first
+	_absorb(big, small, label_key, big, true)
+	events.append({"kind": "merge", "body": big, "other": small, "time": state.time})
+	return big
+
+
+## One body takes another's mass and momentum at their centre of mass
+## (see merge); grow says whether the other's volume adds to its own (not
+## for a body torn into a ring). The front's label names label_body.
+func _absorb(big: int, small: int, label_key: String, label_body: int, grow: bool) -> void:
+	_free_from_rails(big)
+	_free_from_rails(small)
+	var m_big: float = state.final_mass(big)
+	var m_small: float = state.final_mass(small)
+	var total: float = m_big + m_small
+	var share: float = m_small / total if total > 0.0 else 0.5
+	var bb: int = big * 3
+	var bs: int = small * 3
+	var merged: PackedFloat64Array = PackedFloat64Array()
+	for k: int in 3:
+		merged.append(lerpf(state.pos[bb + k], state.pos[bs + k], share))
+	for k: int in 3:
+		merged.append(lerpf(state.vel[bb + k], state.vel[bs + k], share))
+	var keeper: CelestialBody = system.body(big)
+	var absorbed: CelestialBody = system.body(small)
+	var light: float = state.final_light(big)
+	if keeper.kind == CelestialBody.Kind.BLACK_HOLE:
+		light = 0.0
+	elif keeper.is_star() and absorbed.is_star() and m_big > 0.0:
+		light *= pow(total / m_big, 3.5)
+	var radius: float = state.radius[big]
+	if keeper.kind == CelestialBody.Kind.BLACK_HOLE:
+		radius = 2.0 * Units.G * total / (Units.C * Units.C)
+	elif grow:
+		radius = pow(pow(state.radius[big], 3.0) + pow(state.radius[small], 3.0), 1.0 / 3.0)
+	var front: int = emit_front(
+		merged[0], merged[1], merged[2], light > 0.0 or state.final_light(small) > 0.0, true, label_key, label_body
+	)
+	if front < 0:
+		_forget_changes(big)
+		state.mass[big] = total
+		state.light_base[big] = light
+		_forget_changes(small)
+		state.mode[small] = Gravity.Mode.GONE
+		state.mass[small] = 0.0
+		state.light_base[small] = 0.0
+	else:
+		_leave_ghost(big, front)
+		_change_mass(big, front, total)
+		_change_light(big, front, light)
+		state.mode[small] = Gravity.Mode.GHOST
+		_change_mass(small, front, -m_small)
+		_change_light(small, front, -state.final_light(small))
+	for k: int in 3:
+		state.pos[bb + k] = merged[k]
+		state.vel[bb + k] = merged[k + 3]
+	state.radius[big] = radius
+	keeper.mass = total
+	keeper.radius = radius
+	keeper.luminosity = light
+	for child: int in state.body_count():
+		if state.parent[child] == small:
+			state.parent[child] = big
+	if state.parent[big] == small:
+		state.parent[big] = state.parent[small]
 	_after_change(front)
 
 
@@ -232,6 +293,19 @@ func dominant_body(x: float, y: float, z: float) -> int:
 			best = j
 			best_pull = mass / maxf(d2, 1e-300)
 	return best
+
+
+## The point in space under a point of the screen (which shows space from
+## above, x and y in AU): at the height of the body that dominates there,
+## so a body placed there circles in that body's plane.
+func point_in_plane(x: float, y: float) -> PackedFloat64Array:
+	var z: float = 0.0
+	for attempt: int in 2:
+		var j: int = dominant_body(x, y, z)
+		if j < 0:
+			break
+		z = state.view_pos[j * 3 + 2]
+	return PackedFloat64Array([x, y, z])
 
 
 ## The velocity (AU/yr) of a circular orbit through a point around the body
@@ -384,7 +458,7 @@ func set_time(t: float) -> void:
 	if t < state.time:
 		push_error("Simulation.set_time: an integrated system cannot go back to %s (it is at %s)" % [t, state.time])
 		return
-	_core.call(&"advance", state, t, 1 << 30, 1 << 30)
+	_run_to(t, 1 << 30, 1 << 30)
 	clock.time = t
 	_core.call(&"preview", state, t)
 	_show_view()
@@ -438,6 +512,98 @@ func _change_light(index: int, front: int, change: float) -> void:
 		state.light_body.append(index)
 		state.light_front.append(front)
 		state.light_change.append(change)
+
+
+## The lighter of two bodies that came within its Roche limit of the
+## heavier is torn apart: its material spreads into a ring around the
+## heavier body, whose mass and momentum it joins.
+func _tear_apart(primary: int, satellite: int) -> void:
+	var b: int = satellite * 3
+	var q: int = primary * 3
+	var dx: float = state.view_pos[b] - state.view_pos[q]
+	var dy: float = state.view_pos[b + 1] - state.view_pos[q + 1]
+	var dz: float = state.view_pos[b + 2] - state.view_pos[q + 2]
+	var distance: float = sqrt(dx * dx + dy * dy + dz * dz)
+	var torn: CelestialBody = system.body(satellite)
+	var color: StringName = &"dust"
+	if torn.is_star():
+		color = &"accretion"
+	elif torn.radius > 0.0:
+		var radius_m: float = Units.km_from_au(torn.radius) * 1000.0
+		var density: float = Units.kg_from_solar_masses(state.final_mass(satellite)) / (4.0 / 3.0 * PI * pow(radius_m, 3.0))
+		if density < 2000.0:
+			color = &"ice"
+	_absorb(primary, satellite, "FRONT_TORN", satellite, false)
+	system.body(primary).rings.append({
+		"inner": maxf(0.8 * distance, 1.1 * state.radius[primary]), "outer": maxf(1.2 * distance, 1.3 * state.radius[primary]),
+		"color": color, "density": 0.5,
+	})
+	events.append({"kind": "disrupt", "body": primary, "other": satellite, "time": state.time})
+
+
+## Runs the kernel up to a moment, merging bodies that touch on the way
+## and tearing apart those that come within their Roche limit. False when
+## the work allowed ran out first.
+func _run_to(target: float, max_steps: int, max_usec: int) -> bool:
+	var started: int = Time.get_ticks_usec()
+	var steps_left: int = max_steps
+	while true:
+		var spent: int = Time.get_ticks_usec() - started
+		var result: Dictionary = _core.call(&"advance", state, target, steps_left, maxi(max_usec - spent, 0))
+		var status: int = int(result["status"])
+		steps_left -= int(result["steps"])
+		if status == Gravity.Status.EVENTS:
+			var pairs: PackedInt32Array = result["collisions"]
+			var gaps: PackedFloat64Array = result["collision_gaps"]
+			for k: int in range(0, pairs.size(), 2):
+				var i: int = pairs[k]
+				var j: int = pairs[k + 1]
+				if not is_present(i) or not is_present(j):
+					continue
+				if gaps[k >> 1] <= state.radius[i] + state.radius[j]:
+					merge(i, j, "FRONT_MERGED")
+				elif state.final_mass(i) < state.final_mass(j):
+					_tear_apart(j, i)
+				else:
+					_tear_apart(i, j)
+			if steps_left <= 0 or Time.get_ticks_usec() - started > max_usec:
+				return state.time + Gravity.step_size(state.level) > target
+			continue
+		return status != Gravity.Status.BUDGET
+	return true
+
+
+## Leaves a ghost of a body on its old path, as the far side of the system
+## still knows it: with its mass, light and changes still on their way,
+## until the news of this front arrives. The body itself starts again from
+## nothing behind the front (the caller adds what it now is).
+func _leave_ghost(index: int, front: int) -> int:
+	var b: int = index * 3
+	var original: CelestialBody = system.body(index)
+	var ghost_body: CelestialBody = CelestialBody.new()
+	ghost_body.id = StringName("%s_ghost_%d" % [original.id, state.body_count()])
+	ghost_body.name_key = original.name_key
+	ghost_body.name_number = original.name_number
+	ghost_body.kind = original.kind
+	ghost_body.mass = original.mass
+	ghost_body.radius = original.radius
+	ghost_body.luminosity = original.luminosity
+	ghost_body.temperature = original.temperature
+	ghost_body.look = original.look
+	var mass: float = state.final_mass(index)
+	var light: float = state.final_light(index)
+	var ghost: int = system.add(ghost_body)
+	state.add_body(
+		state.pos[b], state.pos[b + 1], state.pos[b + 2], state.vel[b], state.vel[b + 1], state.vel[b + 2],
+		state.mass[index], state.radius[index], Gravity.Mode.GHOST, -1
+	)
+	state.light_base[ghost] = state.light_base[index]
+	_move_changes(index, ghost)
+	_change_mass(ghost, front, -mass)
+	_change_light(ghost, front, -light)
+	state.mass[index] = 0.0
+	state.light_base[index] = 0.0
+	return ghost
 
 
 ## Hands the changes still travelling for one body over to another.

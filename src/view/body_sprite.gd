@@ -26,6 +26,9 @@ var _rings: Array[Node2D] = []
 var _ring_rotation: float = 0.0
 var _ring_flatten: float = 1.0
 var _ring_front: int = 1
+## What the rings were built from (their count and the body's radius), to
+## rebuild them when a body gains a ring or grows.
+var _rings_built_for: Vector2 = Vector2(-1, -1)
 
 
 static func star_color_id(temperature: float) -> StringName:
@@ -47,10 +50,21 @@ func setup(body: CelestialBody, body_index: int, map_seed: int) -> void:
 	material = _disc
 	if body.is_star():
 		_glow = _ring_node(Palette.color(star_color_id(body.temperature)), true)
-	var rings: Array[Dictionary] = body.rings
-	if body.kind == CelestialBody.Kind.BLACK_HOLE:
+	_build_rings()
+
+
+## Makes the ring nodes: the body's rings and, for a black hole, its
+## accretion ring.
+func _build_rings() -> void:
+	for node: Node2D in _rings:
+		remove_child(node)
+		node.queue_free()
+	_rings.clear()
+	_rings_built_for = Vector2(_body.rings.size(), _body.radius)
+	var rings: Array[Dictionary] = _body.rings.duplicate()
+	if _body.kind == CelestialBody.Kind.BLACK_HOLE:
 		# A thin bright accretion ring around the dark disc, seen nearly edge-on.
-		rings = [{"inner": body.radius * 1.5, "outer": body.radius * 2.5, "color": &"accretion", "density": 1.0}]
+		rings.push_front({"inner": _body.radius * 1.5, "outer": _body.radius * 2.5, "color": &"accretion", "density": 1.0})
 		_ring_rotation = -0.3
 		_ring_flatten = 0.35
 		_ring_front = 1
@@ -71,6 +85,8 @@ func setup(body: CelestialBody, body_index: int, map_seed: int) -> void:
 
 ## Updates the drawing for this frame. light_dir points to the star on screen.
 func update_view(new_radius: int, light_dir: Vector2, spin: float) -> void:
+	if _rings_built_for != Vector2(_body.rings.size(), _body.radius):
+		_build_rings()
 	radius_px = new_radius
 	extent_px = radius_px
 	_disc.set_shader_parameter(&"light_dir", light_dir)

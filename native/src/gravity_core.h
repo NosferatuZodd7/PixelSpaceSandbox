@@ -65,6 +65,11 @@ private:
 	std::vector<double> reach2;
 	std::vector<double> new_acc;
 	std::vector<double> prev;
+	// Closest approach of each pair reported this advance (AU).
+	std::vector<double> gaps;
+	// Per body, for Roche limits: its mass once all news has arrived, its
+	// cube root, and radius * (TIDAL_FACTOR / mass)^(1/3) (0 when massless).
+	std::vector<double> final_mass, mass_root, tidal_scale;
 	std::vector<uint8_t> placed;
 	std::vector<int32_t> queue;
 	size_t queue_head = 0;
@@ -94,6 +99,8 @@ private:
 	void place_one(GravityState &s, int64_t i, double t, std::vector<double> &positions, std::vector<double> &velocities);
 
 	void sweep_bodies(GravityState &s, PackedInt32Array &collisions);
+	void prepare_tides(const GravityState &s);
+	double tidal_limit(int64_t i, int64_t j) const;
 	bool touches_body(const GravityState &s, double x, double y, double z, int64_t skip) const;
 
 	double start_particle(GravityState &s, int64_t p);

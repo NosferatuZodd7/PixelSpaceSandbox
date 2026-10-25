@@ -64,6 +64,13 @@ const FRONT_WAKE_RATIO: float = 1e-6
 ## shorten the planet's steps (it gets short steps of its own when it is
 ## integrated).
 const TAU_MASS_RATIO: float = 1e-3
+## A body comes apart in the tides of a heavier one closer than its Roche
+## limit, d = r × (TIDAL_FACTOR × M / m)^(1/3): with 2, the limit of a body
+## held together by its own gravity alone (1.26 times the heavier one's
+## radius at equal densities). Real moons hold on by their own strength a
+## little closer, as Phobos does at 2.8 Mars radii. The kernels report such
+## a close pass like a collision.
+const TIDAL_FACTOR: float = 2.0
 ## Most fronts a mass change can be gated by at once (bits in a mask).
 const MAX_FRONTS: int = 30
 

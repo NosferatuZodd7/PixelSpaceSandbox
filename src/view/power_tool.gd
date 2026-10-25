@@ -107,6 +107,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	_target = -1
 
 
+## The point in space under a screen pixel, in the plane of what it would
+## circle.
+func _point_at(at: Vector2) -> PackedFloat64Array:
+	var world: PackedFloat64Array = view.camera.to_world(at)
+	return simulation.point_in_plane(world[0], world[1])
+
+
 func _action() -> String:
 	return str(_power.get("action", ""))
 
@@ -121,9 +128,9 @@ func _cancel() -> void:
 
 func _place(at: Vector2, drag: Vector2) -> void:
 	var body: CelestialBody = PowerCatalog.make_body(_power, simulation.system)
-	var point: PackedFloat64Array = view.camera.to_world(at)
+	var point: PackedFloat64Array = _point_at(at)
 	var v: PackedFloat64Array = _new_velocity(point, drag, body.mass)
-	var index: int = simulation.place_body(body, point[0], point[1], 0.0, v[0], v[1], v[2], "FRONT_PLACED")
+	var index: int = simulation.place_body(body, point[0], point[1], point[2], v[0], v[1], v[2], "FRONT_PLACED")
 	used.emit(_power, index)
 
 
@@ -131,14 +138,14 @@ func _place(at: Vector2, drag: Vector2) -> void:
 ## when there is no drag, else along the drag around the same body.
 func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float) -> PackedFloat64Array:
 	var base: PackedFloat64Array
-	var reference: int = simulation.dominant_body(point[0], point[1], 0.0)
+	var reference: int = simulation.dominant_body(point[0], point[1], point[2])
 	if _power.has("flyby_kms"):
 		var speed_far: float = Units.au_from_km(float(_power["flyby_kms"])) * Units.YEAR_SECONDS
-		base = simulation.flyby_velocity(point[0], point[1], 0.0, speed_far)
+		base = simulation.flyby_velocity(point[0], point[1], point[2], speed_far)
 		while reference >= 0 and simulation.parent_of(reference) >= 0:
 			reference = simulation.parent_of(reference)
 	else:
-		base = simulation.circular_velocity(point[0], point[1], 0.0, mass)
+		base = simulation.circular_velocity(point[0], point[1], point[2], mass)
 	if drag.length() < MIN_DRAG:
 		return base
 	return _along_drag(reference, base, drag)
@@ -177,10 +184,10 @@ func _draw() -> void:
 		"place":
 			var at: Vector2 = _press_at if _pressed else _hover
 			var drag: Vector2 = (_hover - _press_at) if _pressed else Vector2.ZERO
-			var point: PackedFloat64Array = view.camera.to_world(at)
+			var point: PackedFloat64Array = _point_at(at)
 			var body: CelestialBody = PowerCatalog.make_body(_power, simulation.system)
 			var v: PackedFloat64Array = _new_velocity(point, drag, body.mass)
-			_draw_path(point[0], point[1], v, body.mass, path_color)
+			_draw_path(point, v, body.mass, path_color)
 			if drag.length() >= MIN_DRAG:
 				draw_line(at, _hover, accent)
 			draw_arc(at, 4.0, 0.0, TAU, 12, accent)
@@ -194,7 +201,7 @@ func _draw() -> void:
 				var drag: Vector2 = _hover - _press_at
 				var v: PackedFloat64Array = _thrown_velocity(target, drag)
 				var b: int = target * 3
-				_draw_path(simulation.state.view_pos[b], simulation.state.view_pos[b + 1], v, simulation.state.final_mass(target), path_color)
+				_draw_path(simulation.state.view_pos.slice(b, b + 3), v, simulation.state.final_mass(target), path_color)
 				draw_line(at, at + drag, accent)
 		"delete":
 			var target: int = view.pick(_hover)
@@ -204,8 +211,8 @@ func _draw() -> void:
 
 ## The path a body at a point with a velocity would take around what
 ## dominates there, as a dashed conic (gravity of the others left out).
-func _draw_path(x: float, y: float, v: PackedFloat64Array, mass: float, color: Color) -> void:
-	var reference: int = simulation.dominant_body(x, y, 0.0)
+func _draw_path(point: PackedFloat64Array, v: PackedFloat64Array, mass: float, color: Color) -> void:
+	var reference: int = simulation.dominant_body(point[0], point[1], point[2])
 	if _power.has("flyby_kms"):
 		while reference >= 0 and simulation.parent_of(reference) >= 0:
 			reference = simulation.parent_of(reference)
@@ -216,7 +223,7 @@ func _draw_path(x: float, y: float, v: PackedFloat64Array, mass: float, color: C
 	var view_vel: PackedFloat64Array = simulation.state.view_vel
 	var mu: float = Units.G * simulation.state.g_scale * (simulation.state.final_mass(reference) + mass)
 	var elements: PackedFloat64Array = Kepler.elements_from_state(
-		x - view_pos[b], y - view_pos[b + 1], -view_pos[b + 2],
+		point[0] - view_pos[b], point[1] - view_pos[b + 1], point[2] - view_pos[b + 2],
 		v[0] - view_vel[b], v[1] - view_vel[b + 1], v[2] - view_vel[b + 2], mu, 0.0
 	)
 	if elements.is_empty():

@@ -154,5 +154,7 @@ PLACED_ROGUE,Rogue %s,Errante %s
 FRONT_PLACED,%s appeared,%s apareceu
 FRONT_REMOVED,%s vanished,%s desapareceu
 FRONT_FLUNG,%s changed course,%s mudou de rumo
+FRONT_MERGED,Collision: %s,Colisão: %s
+FRONT_TORN,%s torn into a ring,%s desfeito num anel
 VIEW_FOLLOWING,Following %s,A seguir: %s
 VIEW_TRUE_SCALE,TRUE SCALE,ESCALA REAL

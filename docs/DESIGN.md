@@ -314,9 +314,27 @@ they are nearest the middle of the screen without covering anything.
 ### Collisions
 
 Swept tests (closest approach of straight-line motion over the step) find
-body–body collisions and particle impacts even at high speed. The kernel
-stops at the step where it finds one and reports it; resolving it (merger,
-debris, crater) is the game's job.
+body–body collisions and particle impacts even at high speed. A pair is
+also reported when the lighter body passes inside its Roche limit of the
+heavier one, r × (2 M / m)^(1/3) with the masses every body will have once
+all news has arrived (the limit of a body held together by its own gravity
+alone; real moons hold on a little closer by their strength, as Phobos
+does). The kernel stops at the step where it finds one and reports the
+pairs with how close they came (`collision_gaps`).
+
+`Simulation` resolves them and runs on to the frame's moment:
+
+- touching: `merge` — the heavier body (a black hole always) keeps its
+  name and takes the other's mass and momentum at their centre of mass;
+  volumes add up, a black hole's horizon grows with its mass, two stars
+  make one brighter by L ∝ M^3.5. One front carries the news: until it
+  arrives both pull on as ghosts on their old paths, so the far field does
+  not jump.
+- inside the Roche limit: the lighter body is torn into a ring around the
+  heavier one (dust, ice when it was light, glowing gas for a star), whose
+  mass and momentum the material joins without making it bigger.
+
+Each is reported in `Simulation.events` for notifications.
 
 ### Benchmark
 
@@ -439,3 +457,4 @@ at startup as on every later run.
 | 16 | The gravity kernel exists in GDScript (reference) and C++ (GDExtension) with bit-identical results; the game runs on C++ (approved after the benchmark) | 2026-10 |
 | 17 | A click places a body on a circular orbit, a drag throws it; previews and shown orbits are two-body conics around what the body circles | 2026-10 |
 | 18 | The habitable zone is drawn from the summed light of every star, not as one ring per star | 2026-10 |
+| 19 | Collisions merge bodies; a pass inside the Roche limit (rigid-body factor 2) tears the lighter body into a ring; both found by the kernels at every step | 2026-10 |

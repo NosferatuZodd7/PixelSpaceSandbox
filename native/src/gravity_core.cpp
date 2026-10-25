@@ -40,6 +40,7 @@ constexpr double SLEEP_REACH = 0.75;
 constexpr double SLEEP_HILL_SHARE = 0.4;
 constexpr double WAKE_HILL_SHARE = 0.5;
 constexpr double FRONT_WAKE_RATIO = 1e-6;
+constexpr double TIDAL_FACTOR = 2.0;
 constexpr int64_t MAINTENANCE_STEPS = 64;
 constexpr double RAILS_MAX_MASS = 0.01;
 constexpr double MAX_CHECK_INTERVAL = 0.25;
@@ -482,11 +483,13 @@ Dictionary GravityCore::run(GravityState &s, double p_target, int64_t p_max_step
 	PackedInt32Array collisions;
 	PackedInt32Array impacts;
 	PackedFloat64Array impact_data;
+	gaps.clear();
 	int64_t status = REACHED;
 	int64_t steps = 0;
 	woken = 0;
 	slept = 0;
 	prepare(s);
+	prepare_tides(s);
 	build_queue(s, p_target);
 	while (true) {
 		double h = step_size(s.level);
@@ -514,6 +517,7 @@ Dictionary GravityCore::run(GravityState &s, double p_target, int64_t p_max_step
 	result["status"] = status;
 	result["steps"] = steps;
 	result["collisions"] = collisions;
+	result["collision_gaps"] = to_packed(gaps);
 	result["impacts"] = impacts;
 	result["impact_data"] = impact_data;
 	result["woken"] = woken;
@@ -937,7 +941,7 @@ void GravityCore::sweep_bodies(GravityState &s, PackedInt32Array &collisions) {
 				continue;
 			}
 			int64_t bj = j * 3;
-			double reach = s.radius[i] + s.radius[j];
+			double reach = maxf(s.radius[i] + s.radius[j], tidal_limit(i, j));
 			double d1x = pos[bi] - pos[bj];
 			double d1y = pos[bi + 1] - pos[bj + 1];
 			double d1z = pos[bi + 2] - pos[bj + 2];
@@ -954,12 +958,37 @@ void GravityCore::sweep_bodies(GravityState &s, PackedInt32Array &collisions) {
 			if (dist2 < reach * reach) {
 				collisions.push_back(i);
 				collisions.push_back(j);
+				gaps.push_back(std::sqrt(dist2));
 				hit[i] = 1;
 				hit[j] = 1;
 				break;
 			}
 		}
 	}
+}
+
+void GravityCore::prepare_tides(const GravityState &s) {
+	int64_t n = s.n();
+	final_mass = s.mass;
+	for (size_t d = 0; d < s.delta_body.size(); d++) {
+		final_mass[s.delta_body[d]] += s.delta_mass[d];
+	}
+	mass_root.assign(n, 0.0);
+	tidal_scale.assign(n, 0.0);
+	for (int64_t i = 0; i < n; i++) {
+		double m = final_mass[i];
+		mass_root[i] = m > 0.0 ? std::pow(m, 1.0 / 3.0) : 0.0;
+		tidal_scale[i] = m > 0.0 ? s.radius[i] * std::pow(TIDAL_FACTOR / m, 1.0 / 3.0) : 0.0;
+	}
+}
+
+double GravityCore::tidal_limit(int64_t i, int64_t j) const {
+	int64_t light = final_mass[i] < final_mass[j] ? i : j;
+	int64_t heavy = light == i ? j : i;
+	if (final_mass[light] <= 0.0 || final_mass[heavy] <= final_mass[light]) {
+		return 0.0;
+	}
+	return tidal_scale[light] * mass_root[heavy];
 }
 
 bool GravityCore::touches_body(const GravityState &s, double x, double y, double z, int64_t skip) const {
