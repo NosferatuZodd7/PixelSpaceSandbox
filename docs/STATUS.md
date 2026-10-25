@@ -34,21 +34,33 @@
 | Inspect window | ✅ | Click a body; live values; drag it, pin it, several open at once |
 | Pause menu | ✅ | Esc: continue, settings, title screen, quit |
 
-## Milestone 2 — Gravity sandbox ⬜
+## Milestone 2 — Gravity sandbox 🟡
 
-| Feature | Status |
-| --- | --- |
-| Benchmark (low profile, 8 ms per frame budget) | ⬜ |
-| N-body physics; test particles with sleeping and waking | ⬜ |
-| Belts, Oort cloud, comets with tails | ⬜ |
-| Light and gravity fronts at c; gravity ghosts; speed-of-light world law | 🟡 front structure and arrival rule in place and tested |
-| Smart time (follow the wave, slow motion on arrival, jump to next arrival) | ⬜ |
-| Ghost trajectories | ⬜ |
-| Collisions, impacts, Roche limit (rings, tidal disruption) | ⬜ |
-| Cosmos powers (place, fling, delete, second sun, black hole, rogue planet) | ⬜ |
-| Timeline: snapshots, rewind, undo | ⬜ |
-| Overlays, ruler, light pulse | ⬜ |
-| Notifications; world laws for the cosmos | ⬜ |
+| Feature | Status | Notes |
+| --- | --- | --- |
+| Benchmark (low profile, 8 ms per frame budget) | 🟡 | Scene and tool in place (`src/sim/benchmark_scenario.gd`, `tools/benchmark.gd`); the native kernel meets the budget (0.9 ms), the GDScript one does not (70 ms), so the game runs on the native kernel (approved). Still to measure: the whole game, drawing included, once the game screen runs on it |
+| N-body physics; test particles with sleeping and waking | 🟡 | Kernel done and tested in GDScript and C++ (identical results); not yet driving the game screen |
+| Belts, Oort cloud, comets with tails | ⬜ | |
+| Light and gravity fronts at c; gravity ghosts; speed-of-light world law | 🟡 | Kernel gates every pull by the fronts that have arrived, and keeps ghosts pulling; not yet created by the game |
+| Smart time (follow the wave, slow motion on arrival, jump to next arrival) | ⬜ | |
+| Ghost trajectories | ⬜ | |
+| Collisions, impacts, Roche limit (rings, tidal disruption) | 🟡 | Kernel finds collisions and impacts (swept tests); merging, debris and the Roche limit not yet built |
+| Cosmos powers (place, fling, delete, second sun, black hole, rogue planet) | ⬜ | |
+| Timeline: snapshots, rewind, undo | ⬜ | The state copies itself in full (`NBodyState.copy()`) |
+| Overlays, ruler, light pulse | ⬜ | |
+| Notifications; world laws for the cosmos | ⬜ | |
+
+### Task log
+
+| Task | State | Files | Tests run | Result | Next step |
+| --- | --- | --- | --- | --- | --- |
+| Gravity kernel (GDScript reference) | Done | `src/sim/gravity.gd`, `nbody_state.gd`, `gravity_core_script.gd`, `kepler.gd` | `test_gravity` (14 tests) | Pass | Drive the game screen with it |
+| Native kernel (C++ GDExtension) | Done, approved for the game | `native/`, `src/sim/gravity.gd` | `test_gravity` on both kernels, `test_kernels_agree`; benchmark comparison | Builds for Linux and Windows (MinGW) with no warnings; identical results to GDScript after 600 benchmark frames. Not run on Windows yet (no Windows machine here) | First run on Windows in CI |
+| CI builds the native kernel; Windows self-test | Written, not run | `.github/workflows/build.yml`, `src/core/gravity_self_test.gd`, `src/core/app.gd` | Self-test run locally in the editor and in an exported Linux release build; workflow not run (nothing pushed) | Self-test passes on Linux | Runs on the next push to `beta` |
+| Fresh-checkout crash with a GDExtension | Done | `tools/run_tests.sh`, `tools/run_tests.ps1` | Fresh imports, 3 runs | Godot 4.7.2 crashes on exit after loading an extension it found during the same run (also with an empty class and with godot-cpp master); listing the extensions before the first import avoids it | — |
+| Particle waking rule | Done | both kernels, `gravity.gd` | 2 new tests (distant companion star; falling asleep again) | A companion star's Hill sphere woke every belt particle; the wake zone is now capped at half the body's distance to its parent, and particles sleep again beyond twice the zone | — |
+| Code review fixes | Done | both kernels, `gravity.gd`, `gravity_self_test.gd`, `benchmark_scenario.gd`, `tools/`, `native/SConstruct`, `CLAUDE.md` | Full suite (111 tests); new test: a moon sleeps around a planet only deep in its Hill sphere; benchmark rerun | Fixed: the outer star's tide ignored when sleeping around a planet; a companion's wake zone smaller than its Hill sphere; particles near a companion unable to sleep; the self-test needing bit-exact agreement across platforms (now within 10^-9 AU); a confusing failure when the native library is not built; a nested godot-cpp checkout being loaded; duplicated timing code; unchecked benchmark arguments | — |
+| Benchmark scene and tool | Done | `src/sim/benchmark_scenario.gd`, `tools/benchmark.gd` | 3 repeats × 600 frames per kernel, editor and exported release | Release build: GDScript 69–74 ms per frame (budget 8 ms), C++ 0.9 ms; see DESIGN.md, "Benchmark" | — |
 
 ## Milestone 3 — New system dialog ⬜
 

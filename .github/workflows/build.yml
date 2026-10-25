@@ -1,7 +1,10 @@
-# Tests the project and builds the Windows and Linux executables with the
-# official Godot release and export templates (the Windows build ships the
-# ANGLE fallback). The Windows build is then started on a real Windows
-# machine to check it runs. Download the builds from the run's "Artifacts".
+# Builds the native gravity kernel (a GDExtension, with godot-cpp) for Linux
+# and Windows, tests the project and builds the Windows and Linux executables
+# with the official Godot release and export templates (the Windows build
+# ships the ANGLE fallback). The Windows build is then started on a real
+# Windows machine to check it runs and that its native kernel loads and
+# agrees with the GDScript one. Download the builds from the run's
+# "Artifacts".
 name: Build
 
 on:
@@ -15,6 +18,8 @@ permissions:
 
 env:
   GODOT_VERSION: 4.7.2
+  # godot-cpp, branch 4.5 (extensions built for 4.5 run on later 4.x).
+  GODOT_CPP_COMMIT: 27d9dd23c83871e0619fca5dc2cddfbfd69e926a
 
 jobs:
   test-and-export:
@@ -22,6 +27,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build the native gravity kernel for Linux and Windows
+        run: |
+          pip install scons
+          sudo apt-get update -q
+          sudo apt-get install -y -q g++-mingw-w64-x86-64-posix
+          cpp="$RUNNER_TEMP/godot-cpp"
+          git init -q "$cpp"
+          git -C "$cpp" fetch -q --depth 1 https://github.com/godotengine/godot-cpp "$GODOT_CPP_COMMIT"
+          git -C "$cpp" checkout -q FETCH_HEAD
+          (cd native && scons platform=linux target=template_release godot_cpp="$cpp" -j"$(nproc)")
+          (cd native && scons platform=windows target=template_release godot_cpp="$cpp" -j"$(nproc)")
+          ls -la native/bin
+          test -f native/bin/libpixelspace.linux.x86_64.so
+          test -f native/bin/libpixelspace.windows.x86_64.dll
 
       - name: Install Godot and its export templates
         run: |
@@ -47,7 +67,9 @@ jobs:
           "$GODOT" --headless --path . --export-release "Linux" "$PWD/build/linux/PixelSpaceSandbox.x86_64"
           ls -la build/windows build/linux
           test -f build/windows/PixelSpaceSandbox.exe
+          test -f build/windows/libpixelspace.windows.x86_64.dll
           test -f build/linux/PixelSpaceSandbox.x86_64
+          test -f build/linux/libpixelspace.linux.x86_64.so
 
       - uses: actions/upload-artifact@v4
         with:
@@ -99,11 +121,26 @@ jobs:
           if (-not (Select-String -Path $log -Pattern "OpenGL API" -Quiet)) { throw "The renderer did not start." }
           if (Select-String -Path $log -Pattern "SCRIPT ERROR" -CaseSensitive -Quiet) { throw "The game reported script errors." }
 
+      - name: Check the native gravity kernel on Windows
+        shell: pwsh
+        run: |
+          $log = Join-Path $PWD "self-test.log"
+          $game = Start-Process -FilePath .\PixelSpaceSandbox.exe -ArgumentList "--headless", "--log-file", $log, "--", "--gravity-self-test" -PassThru
+          $null = $game.Handle
+          if (-not $game.WaitForExit(300000)) {
+            Stop-Process -Id $game.Id -Force
+            throw "The self-test did not finish within 5 minutes."
+          }
+          Get-Content $log
+          if ($game.ExitCode -ne 0) { throw "The gravity self-test failed (exit code $($game.ExitCode))." }
+          if (-not (Select-String -Path $log -Pattern "kernels agree: true" -Quiet)) { throw "The native kernel did not agree with the GDScript one." }
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: windows-run
           path: |
             run.log
+            self-test.log
             windows-screenshot.png
           if-no-files-found: ignore

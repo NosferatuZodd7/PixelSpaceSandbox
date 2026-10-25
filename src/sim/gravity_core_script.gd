@@ -731,32 +731,8 @@ func _try_sleep(s: NBodyState, p: int) -> bool:
 	var rx: float = x - s.pos[pb]
 	var ry: float = y - s.pos[pb + 1]
 	var rz: float = z - s.pos[pb + 2]
-	var r2: float = rx * rx + ry * ry + rz * rz
+	var r_primary: float = sqrt(rx * rx + ry * ry + rz * rz)
 	var g: float = Units.G * s.g_scale
-	var own: float = g * s.mass[primary] / r2
-	# Tidal pull of everything else, relative to the parent.
-	var tx: float = 0.0
-	var ty: float = 0.0
-	var tz: float = 0.0
-	for j: int in s.mass.size():
-		if j == primary or s.mode[j] == GONE or s.mode[j] == GHOST or s.mass[j] == 0.0:
-			continue
-		var bj: int = j * 3
-		var dx: float = s.pos[bj] - x
-		var dy: float = s.pos[bj + 1] - y
-		var dz: float = s.pos[bj + 2] - z
-		var d2: float = dx * dx + dy * dy + dz * dz
-		var f: float = g * s.mass[j] / (d2 * sqrt(d2))
-		var ex: float = s.pos[bj] - s.pos[pb]
-		var ey: float = s.pos[bj + 1] - s.pos[pb + 1]
-		var ez: float = s.pos[bj + 2] - s.pos[pb + 2]
-		var e2: float = ex * ex + ey * ey + ez * ez
-		var fe: float = g * s.mass[j] / (e2 * sqrt(e2))
-		tx += f * dx - fe * ex
-		ty += f * dy - fe * ey
-		tz += f * dz - fe * ez
-	if tx * tx + ty * ty + tz * tz > pow(Gravity.SLEEP_RATIO * own, 2.0):
-		return false
 	var mu: float = g * s.mass[primary]
 	var elements: PackedFloat64Array = Kepler.elements_from_state(
 		rx, ry, rz, s.p_vel[b] - s.vel[pb], s.p_vel[b + 1] - s.vel[pb + 1], s.p_vel[b + 2] - s.vel[pb + 2],
@@ -766,6 +742,24 @@ func _try_sleep(s: NBodyState, p: int) -> bool:
 		return false
 	if elements[0] * (1.0 - elements[1]) < 3.0 * s.radius[primary]:
 		return false
+	# Around a body that circles another, only deep inside its Hill sphere.
+	if s.hill[primary] < INF and elements[0] * (1.0 + elements[1]) > Gravity.SLEEP_HILL_SHARE * s.hill[primary]:
+		return false
+	var ancestors: PackedInt32Array = _ancestors(s, primary)
+	for j: int in s.mass.size():
+		if j == primary or s.mode[j] == GONE or s.mode[j] == GHOST or ancestors.has(j):
+			continue
+		var zone: float = _wake_zone(s, j, primary, r_primary)
+		var bj: int = j * 3
+		var ex: float = s.pos[bj] - s.pos[pb]
+		var ey: float = s.pos[bj + 1] - s.pos[pb + 1]
+		var ez: float = s.pos[bj + 2] - s.pos[pb + 2]
+		var limit: float = maxf(minf(Gravity.SLEEP_FACTOR * zone, Gravity.SLEEP_REACH * sqrt(ex * ex + ey * ey + ez * ez)), zone)
+		var dx: float = s.pos[bj] - x
+		var dy: float = s.pos[bj + 1] - y
+		var dz: float = s.pos[bj + 2] - z
+		if sqrt(dx * dx + dy * dy + dz * dz) < limit:
+			return false
 	for k: int in ES:
 		s.p_elem[p * ES + k] = elements[k]
 	s.p_mode[p] = ASLEEP
@@ -856,22 +850,14 @@ func _check_asleep(s: NBodyState, p: int) -> bool:
 	var r_primary: float = sqrt(rel[0] * rel[0] + rel[1] * rel[1] + rel[2] * rel[2])
 	if r_primary < 3.0 * s.radius[primary]:
 		return true
-	var ancestors: PackedInt32Array = PackedInt32Array()
-	var up: int = s.parent[primary]
-	while up >= 0 and ancestors.size() < 8:
-		ancestors.append(up)
-		up = s.parent[up]
+	if s.hill[primary] < INF and r_primary > Gravity.WAKE_HILL_SHARE * s.hill[primary]:
+		return true
+	var ancestors: PackedInt32Array = _ancestors(s, primary)
 	var soonest: float = MAX_CHECK_INTERVAL
 	for j: int in s.mass.size():
 		if j == primary or s.mode[j] == GONE or s.mode[j] == GHOST or ancestors.has(j):
 			continue
-		var zone: float
-		if s.hill[j] < INF:
-			zone = Gravity.WAKE_HILL * s.hill[j]
-		else:
-			# A top body that is not this particle's ancestor (another star).
-			zone = r_primary * pow(2.0 * s.mass[j] / (WAKE_TIDAL * maxf(s.mass[primary], 1e-300)), 1.0 / 3.0)
-		zone = maxf(zone, 3.0 * s.radius[j])
+		var zone: float = _wake_zone(s, j, primary, r_primary)
 		var b: int = j * 3
 		var dx: float = x - s.pos[b]
 		var dy: float = y - s.pos[b + 1]
@@ -896,6 +882,37 @@ func _check_asleep(s: NBodyState, p: int) -> bool:
 	s.p_last[p] = s.time
 	s.p_next[p] = s.time + maxf(soonest, Gravity.step_size(s.level))
 	return false
+
+
+## How close body j may come before an asleep particle circling primary at
+## r_primary must wake: a few Hill radii of j, but no farther than half way
+## to j's own parent unless its Hill sphere reaches farther still. For
+## another star at the top of the system, where its tidal pull becomes
+## noticeable.
+func _wake_zone(s: NBodyState, j: int, primary: int, r_primary: float) -> float:
+	var zone: float
+	var up: int = s.parent[j]
+	if s.hill[j] < INF and up >= 0:
+		var bj: int = j * 3
+		var bu: int = up * 3
+		var dx: float = s.pos[bj] - s.pos[bu]
+		var dy: float = s.pos[bj + 1] - s.pos[bu + 1]
+		var dz: float = s.pos[bj + 2] - s.pos[bu + 2]
+		zone = maxf(minf(Gravity.WAKE_HILL * s.hill[j], Gravity.WAKE_REACH * sqrt(dx * dx + dy * dy + dz * dz)), s.hill[j])
+	else:
+		zone = r_primary * pow(2.0 * s.mass[j] / (WAKE_TIDAL * maxf(s.mass[primary], 1e-300)), 1.0 / 3.0)
+	return maxf(zone, 3.0 * s.radius[j])
+
+
+## The bodies a primary itself circles, up the hierarchy: their pull is the
+## background a particle's conic already ignores.
+func _ancestors(s: NBodyState, primary: int) -> PackedInt32Array:
+	var ancestors: PackedInt32Array = PackedInt32Array()
+	var up: int = s.parent[primary]
+	while up >= 0 and ancestors.size() < 8:
+		ancestors.append(up)
+		up = s.parent[up]
+	return ancestors
 
 
 ## When front f reaches particle p, if a mass change it carries matters to

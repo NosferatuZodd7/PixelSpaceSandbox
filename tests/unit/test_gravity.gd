@@ -9,15 +9,13 @@ const EARTH_MASS: float = 5.9722e24 / 1.98847e30
 const NO_LIMIT: int = 1 << 30
 
 
-func after_each() -> void:
-	Gravity.use_script_kernel = false
-
-
 ## Every kernel available here, by name.
 func _kernels() -> Dictionary[String, Object]:
-	var kernels: Dictionary[String, Object] = {"script": GravityCoreScript.new()}
-	if Gravity.native_available():
-		kernels["native"] = ClassDB.instantiate(Gravity.NATIVE_CLASS)
+	var kernels: Dictionary[String, Object] = {}
+	for kernel_name: String in ["script", "native"]:
+		var kernel: Object = Gravity.kernel_named(kernel_name)
+		if kernel != null:
+			kernels[kernel_name] = kernel
 	return kernels
 
 
@@ -193,6 +191,66 @@ func test_a_particle_wakes_when_a_planet_comes_near() -> void:
 		assert_true(woken >= 1, "%s: woken when Earth came near" % kernel_name)
 
 
+func test_a_distant_companion_star_leaves_the_belt_asleep() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = NBodyState.new()
+		s.add_body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.00465, Gravity.Mode.FREE, -1)
+		s.add_body(80.0, 0.0, 0.0, 0.0, sqrt(Units.G * 1.6 / 80.0), 0.0, 0.6, 0.003, Gravity.Mode.FREE, -1)
+		s.add_body(-5.2, 0.0, 0.0, 0.0, -sqrt(Units.G / 5.2), 0.0, 9.5e-4, 0.000477, Gravity.Mode.FREE, -1)
+		for k: int in 200:
+			var a: float = 2.1 + 0.006 * k
+			var state: PackedFloat64Array = Kepler.state_from_elements(a, 0.1, 0.05, 0.4 * k, 0.9 * k, 0.37 * k, Kepler.mean_motion(a, 1.0))
+			s.add_sleeping_particle(
+				0, Kepler.elements_from_state(state[0], state[1], state[2], state[3], state[4], state[5], Units.G, 0.0), 1e-9, 0
+			)
+		var woken: int = 0
+		for month: int in 12:
+			woken += int(_advance(kernel, s, (month + 1) / 12.0)["woken"])
+		assert_eq(woken, 0, "%s: no belt particle woken by a star 80 AU away or by Jupiter's usual pull" % kernel_name)
+
+
+func test_an_awake_particle_falls_asleep_when_nothing_is_near() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = NBodyState.new()
+		s.add_body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.00465, Gravity.Mode.FREE, -1)
+		s.add_body(-5.2, 0.0, 0.0, 0.0, -sqrt(Units.G / 5.2), 0.0, 9.5e-4, 0.000477, Gravity.Mode.FREE, -1)
+		var p: int = s.add_particle(2.7, 0.0, 0.0, 0.0, sqrt(Units.G / 2.7), 0.0, 1e-9, 0)
+		var slept: int = 0
+		for month: int in 12:
+			slept += int(_advance(kernel, s, (month + 1) / 12.0)["slept"])
+		assert_eq(s.p_mode[p], Gravity.ParticleMode.ASLEEP, "%s: asleep again on its conic" % kernel_name)
+		assert_eq(slept, 1, "%s: fell asleep once" % kernel_name)
+		assert_eq(s.p_primary[p], 0, "%s: circling the star" % kernel_name)
+
+
+func test_a_particle_sleeps_around_a_planet_only_deep_in_its_hill_sphere() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = NBodyState.new()
+		s.add_body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.00465, Gravity.Mode.FREE, -1)
+		var jupiter_mass: float = 9.5e-4
+		var v: float = sqrt(Units.G * (1.0 + jupiter_mass) / 5.2)
+		s.add_body(5.2, 0.0, 0.0, 0.0, v, 0.0, jupiter_mass, 0.000477, Gravity.Mode.FREE, -1)
+		# Hill radius about 0.355 AU: one moon deep inside it, one near its edge.
+		var deep: float = 0.05
+		var edge: float = 0.25
+		var inner: int = s.add_particle(5.2 + deep, 0.0, 0.0, 0.0, v + sqrt(Units.G * jupiter_mass / deep), 0.0, 1e-9, 0)
+		var outer: int = s.add_particle(5.2 + edge, 0.0, 0.0, 0.0, v + sqrt(Units.G * jupiter_mass / edge), 0.0, 1e-9, 0)
+		var slept: int = 0
+		var woken: int = 0
+		for month: int in 12:
+			var result: Dictionary = _advance(kernel, s, (month + 1) / 12.0)
+			slept += int(result["slept"])
+			woken += int(result["woken"])
+		assert_eq(s.p_mode[inner], Gravity.ParticleMode.ASLEEP, "%s: the close moon sleeps" % kernel_name)
+		assert_eq(s.p_primary[inner], 1, "%s: around Jupiter" % kernel_name)
+		assert_eq(s.p_mode[outer], Gravity.ParticleMode.AWAKE, "%s: the moon near the Hill edge stays integrated" % kernel_name)
+		assert_eq(slept, 1, "%s: only the close moon ever fell asleep (the Sun's tide matters near the edge)" % kernel_name)
+		assert_eq(woken, 0, "%s: and nothing had to be woken again" % kernel_name)
+
+
 func test_the_same_state_has_the_same_future_however_the_frames_fall() -> void:
 	for kernel_name: String in _kernels():
 		var kernel: Object = _kernels()[kernel_name]
@@ -275,3 +333,16 @@ func test_kernels_agree() -> void:
 		assert_almost_eq(a.pos[k], b.pos[k], 1e-12, "body coordinate %d" % k)
 	for k: int in a.p_pos.size():
 		assert_almost_eq(a.p_pos[k], b.p_pos[k], 1e-12, "particle coordinate %d" % k)
+
+
+func test_the_benchmark_scene_has_what_the_brief_asks_for() -> void:
+	var s: NBodyState = BenchmarkScenario.build()
+	var stars: int = 0
+	for i: int in s.body_count():
+		if s.mass[i] > 0.05:
+			stars += 1
+	assert_eq(stars, BenchmarkScenario.STARS, "stars")
+	assert_eq(s.body_count() - stars, BenchmarkScenario.PLANETS + BenchmarkScenario.MOONS, "planets and moons")
+	assert_eq(s.particle_count(), BenchmarkScenario.PARTICLES, "particles")
+	assert_eq(s.front_time.size(), BenchmarkScenario.FRONTS, "fronts")
+	assert_almost_eq(BenchmarkScenario.frame_years() * Units.YEAR_SECONDS, 1e6 / 60.0, 1e-6, "x1,000,000 at 60 frames per second")

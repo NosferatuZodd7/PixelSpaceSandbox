@@ -10,6 +10,7 @@ Exoplanet Archive) and is cited here too.
 | What | Licence | Source |
 | --- | --- | --- |
 | Godot Engine 4.7.2 | MIT | https://godotengine.org — its licence notice must ship with the game (an in-game credits screen comes in milestone 9) |
+| godot-cpp (branch 4.5, commit `27d9dd23`) | MIT | https://github.com/godotengine/godot-cpp — C++ bindings the native gravity kernel (`native/`) is built with; compiled into its library, not shipped as source |
 
 ## Fonts
 

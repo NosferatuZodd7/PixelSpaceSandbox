@@ -35,6 +35,12 @@ technical design in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Checks
 
+Build the native gravity kernel first (once, and after changing `native/`):
+
+```sh
+cd native && scons platform=linux target=template_release godot_cpp=/path/to/godot-cpp
+```
+
 ```sh
 GODOT=/path/to/godot tools/run_tests.sh
 ```

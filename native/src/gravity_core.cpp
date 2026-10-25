@@ -33,7 +33,11 @@ constexpr double UNIT = 1.0 / 1099511627776.0;
 constexpr int64_t MAX_LEVEL = 42;
 constexpr int64_t PARTICLE_MAX_LEVEL = 16;
 constexpr double WAKE_HILL = 3.0;
-constexpr double SLEEP_RATIO = 1e-5;
+constexpr double WAKE_REACH = 0.5;
+constexpr double SLEEP_FACTOR = 2.0;
+constexpr double SLEEP_REACH = 0.75;
+constexpr double SLEEP_HILL_SHARE = 0.4;
+constexpr double WAKE_HILL_SHARE = 0.5;
 constexpr double FRONT_WAKE_RATIO = 1e-6;
 constexpr int64_t MAINTENANCE_STEPS = 64;
 constexpr double RAILS_MAX_MASS = 0.01;
@@ -45,7 +49,7 @@ constexpr double PI = 3.1415926535897932384626433833;
 constexpr double G = 4.0 * PI * PI;
 constexpr double KEPLER_TOLERANCE = 1e-14;
 constexpr int KEPLER_ITERATIONS = 64;
-constexpr double CMP_EPSILON = 0.00001;
+constexpr double APPROX_EPSILON = 0.00001; // Godot's CMP_EPSILON
 const double INF = std::numeric_limits<double>::infinity();
 const double NOT_A_NUMBER = std::numeric_limits<double>::quiet_NaN();
 
@@ -63,16 +67,16 @@ bool is_equal_approx(double a, double b) {
 	if (a == b) {
 		return true;
 	}
-	double tolerance = CMP_EPSILON * std::fabs(a);
-	if (tolerance < CMP_EPSILON) {
-		tolerance = CMP_EPSILON;
+	double tolerance = APPROX_EPSILON * std::fabs(a);
+	if (tolerance < APPROX_EPSILON) {
+		tolerance = APPROX_EPSILON;
 	}
 	return std::fabs(a - b) < tolerance;
 }
 
 double wrapf(double value, double min, double max) {
 	double range = max - min;
-	if (std::fabs(range) < CMP_EPSILON) {
+	if (std::fabs(range) < APPROX_EPSILON) {
 		return min;
 	}
 	double result = value - (range * std::floor((value - min) / range));
@@ -1126,34 +1130,8 @@ bool GravityCore::try_sleep(GravityState &s, int64_t p) {
 	double rx = x - s.pos[pb];
 	double ry = y - s.pos[pb + 1];
 	double rz = z - s.pos[pb + 2];
-	double r2 = rx * rx + ry * ry + rz * rz;
+	double r_primary = std::sqrt(rx * rx + ry * ry + rz * rz);
 	double g = G * s.g_scale;
-	double own = g * s.mass[primary] / r2;
-	double tx = 0.0;
-	double ty = 0.0;
-	double tz = 0.0;
-	for (int64_t j = 0; j < s.n(); j++) {
-		if (j == primary || s.mode[j] == GONE || s.mode[j] == GHOST || s.mass[j] == 0.0) {
-			continue;
-		}
-		int64_t bj = j * 3;
-		double dx = s.pos[bj] - x;
-		double dy = s.pos[bj + 1] - y;
-		double dz = s.pos[bj + 2] - z;
-		double d2 = dx * dx + dy * dy + dz * dz;
-		double f = g * s.mass[j] / (d2 * std::sqrt(d2));
-		double ex = s.pos[bj] - s.pos[pb];
-		double ey = s.pos[bj + 1] - s.pos[pb + 1];
-		double ez = s.pos[bj + 2] - s.pos[pb + 2];
-		double e2 = ex * ex + ey * ey + ez * ez;
-		double fe = g * s.mass[j] / (e2 * std::sqrt(e2));
-		tx += f * dx - fe * ex;
-		ty += f * dy - fe * ey;
-		tz += f * dz - fe * ez;
-	}
-	if (tx * tx + ty * ty + tz * tz > std::pow(SLEEP_RATIO * own, 2.0)) {
-		return false;
-	}
 	double mu = g * s.mass[primary];
 	double elements[ES];
 	if (!elements_from_state(rx, ry, rz, s.p_vel[b] - s.vel[pb], s.p_vel[b + 1] - s.vel[pb + 1], s.p_vel[b + 2] - s.vel[pb + 2],
@@ -1165,6 +1143,27 @@ bool GravityCore::try_sleep(GravityState &s, int64_t p) {
 	}
 	if (elements[0] * (1.0 - elements[1]) < 3.0 * s.radius[primary]) {
 		return false;
+	}
+	if (s.hill[primary] < INF && elements[0] * (1.0 + elements[1]) > SLEEP_HILL_SHARE * s.hill[primary]) {
+		return false;
+	}
+	std::vector<int32_t> up = ancestors(s, primary);
+	for (int64_t j = 0; j < s.n(); j++) {
+		if (j == primary || s.mode[j] == GONE || s.mode[j] == GHOST || contains(up, (int32_t)j)) {
+			continue;
+		}
+		double zone = wake_zone(s, j, primary, r_primary);
+		int64_t bj = j * 3;
+		double ex = s.pos[bj] - s.pos[pb];
+		double ey = s.pos[bj + 1] - s.pos[pb + 1];
+		double ez = s.pos[bj + 2] - s.pos[pb + 2];
+		double limit = maxf(minf(SLEEP_FACTOR * zone, SLEEP_REACH * std::sqrt(ex * ex + ey * ey + ez * ez)), zone);
+		double dx = s.pos[bj] - x;
+		double dy = s.pos[bj + 1] - y;
+		double dz = s.pos[bj + 2] - z;
+		if (std::sqrt(dx * dx + dy * dy + dz * dz) < limit) {
+			return false;
+		}
 	}
 	for (int64_t k = 0; k < ES; k++) {
 		s.p_elem[p * ES + k] = elements[k];
@@ -1269,24 +1268,16 @@ bool GravityCore::check_asleep(GravityState &s, int64_t p) {
 	if (r_primary < 3.0 * s.radius[primary]) {
 		return true;
 	}
-	std::vector<int32_t> ancestors;
-	int32_t up = s.parent[primary];
-	while (up >= 0 && ancestors.size() < 8) {
-		ancestors.push_back(up);
-		up = s.parent[up];
+	if (s.hill[primary] < INF && r_primary > WAKE_HILL_SHARE * s.hill[primary]) {
+		return true;
 	}
+	std::vector<int32_t> up = ancestors(s, primary);
 	double soonest = MAX_CHECK_INTERVAL;
 	for (int64_t j = 0; j < s.n(); j++) {
-		if (j == primary || s.mode[j] == GONE || s.mode[j] == GHOST || contains(ancestors, (int32_t)j)) {
+		if (j == primary || s.mode[j] == GONE || s.mode[j] == GHOST || contains(up, (int32_t)j)) {
 			continue;
 		}
-		double zone;
-		if (s.hill[j] < INF) {
-			zone = WAKE_HILL * s.hill[j];
-		} else {
-			zone = r_primary * std::pow(2.0 * s.mass[j] / (WAKE_TIDAL * maxf(s.mass[primary], 1e-300)), 1.0 / 3.0);
-		}
-		zone = maxf(zone, 3.0 * s.radius[j]);
+		double zone = wake_zone(s, j, primary, r_primary);
 		int64_t b = j * 3;
 		double dx = x - s.pos[b];
 		double dy = y - s.pos[b + 1];
@@ -1316,6 +1307,32 @@ bool GravityCore::check_asleep(GravityState &s, int64_t p) {
 	s.p_last[p] = s.time;
 	s.p_next[p] = s.time + maxf(soonest, step_size(s.level));
 	return false;
+}
+
+double GravityCore::wake_zone(const GravityState &s, int64_t j, int64_t primary, double r_primary) const {
+	double zone;
+	int64_t up = s.parent[j];
+	if (s.hill[j] < INF && up >= 0) {
+		int64_t bj = j * 3;
+		int64_t bu = up * 3;
+		double dx = s.pos[bj] - s.pos[bu];
+		double dy = s.pos[bj + 1] - s.pos[bu + 1];
+		double dz = s.pos[bj + 2] - s.pos[bu + 2];
+		zone = maxf(minf(WAKE_HILL * s.hill[j], WAKE_REACH * std::sqrt(dx * dx + dy * dy + dz * dz)), s.hill[j]);
+	} else {
+		zone = r_primary * std::pow(2.0 * s.mass[j] / (WAKE_TIDAL * maxf(s.mass[primary], 1e-300)), 1.0 / 3.0);
+	}
+	return maxf(zone, 3.0 * s.radius[j]);
+}
+
+std::vector<int32_t> GravityCore::ancestors(const GravityState &s, int64_t primary) const {
+	std::vector<int32_t> found;
+	int32_t up = s.parent[primary];
+	while (up >= 0 && found.size() < 8) {
+		found.push_back(up);
+		up = s.parent[up];
+	}
+	return found;
 }
 
 double GravityCore::significant_arrival(const GravityState &s, int64_t p, int64_t f) const {

@@ -147,8 +147,9 @@ the sky: Mars, Jupiter and Saturn oppositions within 0.15°, the total lunar
 eclipse of 2025-09-07 (Moon 179.6° from the Sun) and the total solar eclipse
 of 2024-04-08 (0.4°).
 
-Milestone 2 replaces rails with n-body gravity behind the same
-`Simulation.advance()`; bodies far from any disturbance may stay on rails.
+Milestone 2 replaces rails with n-body gravity (next section) behind the
+same `Simulation.advance()`; until the player changes something, the
+untouched preset stays on these rails.
 
 ### Time
 
@@ -191,6 +192,150 @@ creates fronts when the player changes the system:
   fill fades out when it is much wider than the screen.
 - The star backdrop does not move when panning: real background stars are
   so far away that crossing a whole system does not shift them.
+
+## The gravity simulation (milestone 2)
+
+### State and kernels
+
+`NBodyState` (`src/sim/nbody_state.gd`) holds the whole physical state in
+packed 64-bit arrays: bodies (position, velocity, acceleration, mass,
+radius, how they move, parent, Hill radius, rails orbit), the mass changes
+still travelling, the fronts, and particles. A *kernel* moves it forward:
+`GravityCoreScript` (GDScript, the reference) and `GravityCore` (C++
+GDExtension in `native/`, the same algorithm line by line). Both give
+bit-for-bit the same results (tested).
+
+- **Bodies** are *free* (integrated: every other body pulls them), on
+  *rails* (a fixed Kepler conic around a parent, exact and cheap), a
+  *ghost* (removed, but still pulling the bodies its removal has not
+  reached), or *gone*.
+- **Particles** (asteroids, comets, debris) are pulled but pull nothing.
+  Asleep they ride a conic around a parent; awake they are integrated.
+
+### Steps that do not depend on frames
+
+Velocity Verlet (kick–drift–kick, symplectic) with one global step of
+2^k × 2^-40 years, about 1/250 of the shortest dynamical time among free
+bodies and awake particles. The step shrinks at once when needed and grows
+only after four calm steps. Awake particles step every 2^m global steps
+(their own pace). Parents, Hill spheres and rails are reviewed every 64
+steps; asleep particles are checked at times worked out from how soon
+anything could come near them. Every decision comes from the state, never
+from the frame clock, so the same state has the same future however the
+frames fall (tested by splitting the same run into uneven frames). The
+game draws between steps from a short extrapolation (`preview()`).
+
+### Light and gravity at the speed of light
+
+Each mass change is a *delta* on a body tied to a *front* (origin, time,
+speed). A receiver feels the body's mass plus the deltas whose front has
+reached it, so:
+
+- a body placed far away is felt only once its front arrives (tested to the
+  step);
+- a removed body becomes a ghost that keeps pulling, along its last path,
+  every body outside the front;
+- a merger becomes two ghosts plus the merged body behind one front, so the
+  far field does not jump (tested to 1 part in 10^4).
+
+### Sleeping and waking particles
+
+An asleep particle wakes when a body comes within its *wake zone*: three
+Hill radii, but no farther than half that body's distance to its own
+parent unless its Hill sphere itself reaches farther (a companion star's
+three Hill radii would otherwise reach the main star and wake the whole
+belt); for another star at the top of the system, where its tidal pull
+reaches 1% of the particle's parent's pull. It also wakes when a mass
+change that matters to it (more than 10^-6 of its parent's pull) reaches
+it, when it nears its parent's surface, or, around a body that itself
+circles another (a moon of a planet), when it is beyond half that body's
+Hill sphere, where the outer star's tide is strong.
+
+An awake particle falls asleep again, on the conic it is then on, when no
+change is still travelling, its orbit is bound and stays clear of its
+parent's surface, around a body that circles another its whole orbit stays
+within 40% of that body's Hill sphere, and every other body is farther than
+twice its wake zone (capped at three quarters of that body's distance to
+the particle's parent, but never inside the wake zone itself).
+
+### Collisions
+
+Swept tests (closest approach of straight-line motion over the step) find
+body–body collisions and particle impacts even at high speed. The kernel
+stops at the step where it finds one and reports it; resolving it (merger,
+debris, crater) is the game's job.
+
+### Benchmark
+
+The brief's low-profile target: 4 stars, 12 planets, 20 moons, 2,000
+particles and 10 fronts still travelling, at ×1,000,000 (4.6 simulated
+hours per frame), within 8 ms of simulation per frame. The scene is
+`BenchmarkScenario` (seeded: a sun-like star with 8 planets and a belt, a
+second star 80 AU away with 4 planets, a red-dwarf pair 600 AU out; 20
+moons around five giants, the innermost on an Io-like 1.8-day orbit; 10% of
+the particles awake; 10 mass changes travelling so every pull checks
+them). `tools/benchmark.gd` times `advance()` + `preview()` per frame,
+without drawing.
+
+Measured on the cloud build machine (Intel Xeon @ 2.1 GHz, 4 cores; one
+core used), Linux, 600 frames per run (10 s of play), simulation only (no
+drawing):
+
+| Kernel | Build | Runs | Mean | Median | 95th percentile | Worst frame |
+| --- | --- | --- | --- | --- | --- | --- |
+| GDScript | exported release | 3 | 69.3–74.2 ms | 66.1–69.6 ms | 82.2–101.0 ms | 274–285 ms |
+| C++ (GDExtension) | exported release | 3 | 0.90–0.91 ms | 0.88–0.89 ms | 1.00–1.03 ms | 2.6–2.7 ms |
+| GDScript | editor | 3 | 85.1–85.9 ms | 79.7–80.8 ms | 105–118 ms | 312–388 ms |
+| C++ (GDExtension) | editor | 3 | 0.89–1.14 ms | 0.87–0.94 ms | 0.98–1.57 ms | 2.6–4.1 ms |
+
+Both kernels take the same 34.6 steps per frame and end with the same 197
+particles awake (none falls asleep while the ten changes are still
+travelling); after 600 frames their positions are identical (difference 0). Total momentum drifts by 5×10^-8 of its size over 10 s of play, from the
+ten mass changes in flight (felt by some bodies and not yet by others).
+Peak memory of the whole Godot process is 121 MB with either kernel; the
+scene's state is well under 1 MB.
+
+The worst frame is the first one, which sets up parents, Hill spheres and
+the first pulls. The minimum PC (dual-core, Intel HD 4000 era) has not
+been measured; if its cores are 2–3 times slower than this one, the native
+kernel would still take about 2–3 ms per frame, while the GDScript one
+would need about 150–200 ms, 20 times over budget.
+
+**Decision (approved by the owner, 2026-10-25):** the GDScript kernel
+misses the 8 ms budget by about nine times on this machine, so, as the
+brief foresaw, the gravity core runs in C++. The game uses the native
+kernel whenever it is loaded (`Gravity.native_enabled`); the GDScript
+kernel stays as the reference the tests compare it with, and as a fallback
+if the library cannot be loaded.
+
+Reproduce with `godot --headless --path . --script res://tools/benchmark.gd
+-- --kernel=both`, or in an exported game with `-- --gravity-self-test
+--gravity-self-test-frames=600`.
+
+### The native kernel
+
+`native/` holds the C++ source, built with godot-cpp (branch 4.5; an
+extension built for 4.5 runs on later 4.x) into one optimised library per
+platform: `native/bin/libpixelspace.linux.x86_64.so` and
+`libpixelspace.windows.x86_64.dll`. Only the classes it needs are bound
+(`native/build_profile.json`), so godot-cpp builds in a few minutes. CI
+builds both before running the tests; locally:
+
+```sh
+cd native
+scons platform=linux target=template_release godot_cpp=/path/to/godot-cpp
+scons platform=windows target=template_release godot_cpp=/path/to/godot-cpp   # needs MinGW-w64
+```
+
+The Windows library is cross-compiled with MinGW-w64 and links its C++
+runtime statically: it needs only `KERNEL32.dll` and `msvcrt.dll`.
+
+Godot 4.7.2 crashes on exit after loading a GDExtension it only discovered
+during that same run, which is what the first import of a fresh checkout
+does (reproduced with an empty extension class and with godot-cpp master
+too). `tools/run_tests.sh` and `.ps1` list the extensions in
+`.godot/extension_list.cfg` before that first import, so Godot loads them
+at startup as on every later run.
 
 ## Testing
 
@@ -236,3 +381,6 @@ creates fronts when the player changes the system:
 | 11 | Orbits as fixed-size dashes, cut only near the screen; exact arcs around the body past 2,500 px | 2026-10 |
 | 12 | Gravity shown in g and masses as "× Earth": the pixel font has no superscripts | 2026-10 |
 | 13 | Body appearance from data (`data/body_looks.json`) until real planet maps (milestone 5) | 2026-10 |
+| 14 | One global velocity-Verlet step, a power of two of 2^-40 years chosen from the state alone, so results never depend on frame timing | 2026-10 |
+| 15 | Mass changes travel as fronts; removed bodies stay as ghosts until the news has passed every receiver | 2026-10 |
+| 16 | The gravity kernel exists in GDScript (reference) and C++ (GDExtension) with bit-identical results; the game runs on C++ (approved after the benchmark) | 2026-10 |

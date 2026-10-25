@@ -1,1 +1,0 @@
-# Keeps Godot from loading the native kernel until CI builds it (milestone 2, in progress).

@@ -104,6 +104,8 @@ private:
 	void run_checks(GravityState &s);
 	void enqueue(const GravityState &s, int32_t p);
 	bool check_asleep(GravityState &s, int64_t p);
+	double wake_zone(const GravityState &s, int64_t j, int64_t primary, double r_primary) const;
+	std::vector<int32_t> ancestors(const GravityState &s, int64_t primary) const;
 	double significant_arrival(const GravityState &s, int64_t p, int64_t f) const;
 	double significant_arrival_at(const GravityState &s, int64_t f, double x, double y, double z, double r_primary,
 			int64_t primary) const;

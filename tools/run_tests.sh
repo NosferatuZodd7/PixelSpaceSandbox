@@ -8,6 +8,9 @@
 #   3. runs the game itself for a few hundred frames;
 #   4. fails if Godot printed any error or warning in any step.
 #
+# The native gravity kernel must be built first (native/bin/, see
+# docs/DESIGN.md, "The native kernel"); CI does that before running this.
+#
 # Usage:
 #   tools/run_tests.sh [--filter=<text>]
 #   GODOT=/path/to/godot tools/run_tests.sh
@@ -30,6 +33,24 @@ step() {
     failed=1
   fi
 }
+
+# Godot 4.7 crashes on exit after loading a GDExtension it only discovered
+# during that same run, which is what a fresh checkout's first import does.
+# Listing the extensions beforehand makes Godot load them at startup, as it
+# does on every later run.
+case "$(uname -s)" in
+  Linux*) library="$ROOT/native/bin/libpixelspace.linux.x86_64.so" ;;
+  *) library="" ;;
+esac
+if [ -n "$library" ] && [ ! -f "$library" ]; then
+  echo "== The native gravity kernel is not built: $library is missing."
+  echo "   Build it first: cd native && scons platform=linux target=template_release godot_cpp=/path/to/godot-cpp"
+  exit 1
+fi
+mkdir -p "$ROOT/.godot"
+if [ ! -f "$ROOT/.godot/extension_list.cfg" ]; then
+  (cd "$ROOT" && find . -name '*.gdextension' -not -path './.godot/*' -not -path '*/godot-cpp/*' | sed 's|^\./|res://|') > "$ROOT/.godot/extension_list.cfg"
+fi
 
 step import-first-pass "$GODOT" --headless --path "$ROOT" --import
 step import "$GODOT" --headless --path "$ROOT" --import

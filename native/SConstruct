@@ -8,7 +8,12 @@
 # One optimised library per platform serves the editor and both export kinds.
 import os
 
-godot_cpp = ARGUMENTS.get("godot_cpp", os.environ.get("GODOT_CPP", "godot-cpp"))
+godot_cpp = ARGUMENTS.get("godot_cpp", os.environ.get("GODOT_CPP", ""))
+if not godot_cpp:
+    # Kept outside the project: Godot would otherwise find godot-cpp's own
+    # example extension and try to load it.
+    print("Pass godot_cpp=/path/to/godot-cpp (or set GODOT_CPP), a checkout of godot-cpp branch 4.5 outside this project.")
+    Exit(1)
 ARGUMENTS.setdefault("build_profile", os.path.abspath("build_profile.json"))
 env = SConscript(os.path.join(godot_cpp, "SConstruct"))
 

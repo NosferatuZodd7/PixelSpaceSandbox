@@ -14,8 +14,11 @@ Made with Godot 4 (Compatibility renderer) to run smoothly on weak PCs.
 ## Running the game
 
 1. Install [Godot 4.7.2](https://godotengine.org/download) (standard build, not .NET).
-2. Open Godot, choose **Import**, and select this folder's `project.godot`.
-3. Press **F5** to run.
+2. Build the native gravity kernel once (see "The native kernel" in
+   [docs/DESIGN.md](docs/DESIGN.md)); without it Godot reports that it cannot
+   open `native/bin/libpixelspace.*`.
+3. Open Godot, choose **Import**, and select this folder's `project.godot`.
+4. Press **F5** to run.
 
 The title screen has a menu (mouse, or arrows + Enter, Esc to go back).
 **Settings** changes the language, window or fullscreen, and vertical sync;
@@ -60,6 +63,12 @@ $env:GODOT="C:\path\to\godot.exe"; tools\run_tests.ps1   # Windows (PowerShell)
 tools/run_tests.sh --filter=palette                 # only matching tests
 ```
 
+To measure the gravity simulation on the milestone 2 benchmark scene:
+
+```sh
+godot --headless --path . --script res://tools/benchmark.gd -- --kernel=both
+```
+
 To take a screenshot (needs a display, or `xvfb-run` on Linux):
 
 ```sh
@@ -72,6 +81,7 @@ godot --path . --script res://tools/screenshot.gd -- --out=shot.png --scale=2
 | --- | --- |
 | `src/core/` | Cross-cutting code: palette, input bindings, the `App` autoload |
 | `src/sim/` | The simulation: plain data and systems, no nodes, testable headless (from milestone 1) |
+| `native/` | The gravity kernel in C++ (a GDExtension), the same algorithm as `src/sim/gravity_core_script.gd` |
 | `src/view/` | Presentation: nodes and drawing (sky, bodies, overlays) |
 | `src/ui/` | Interface: screens, panels, theme |
 | `scenes/` | Godot scenes |

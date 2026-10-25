@@ -7,6 +7,9 @@
 #   3. runs the game itself for a few hundred frames;
 #   4. fails if Godot printed any error or warning in any step.
 #
+# The native gravity kernel must be built first (native/bin/, see
+# docs/DESIGN.md, "The native kernel").
+#
 # Usage:
 #   powershell -File tools\run_tests.ps1 [--filter=<text>]
 #   $env:GODOT = "C:\Godot\Godot_v4.7.2-stable_win64_console.exe"
@@ -26,6 +29,26 @@ function Invoke-Step([string] $Name, [string[]] $Arguments) {
 		Write-Host "   exit code $LASTEXITCODE"
 		$script:failed = $true
 	}
+}
+
+# Godot 4.7 crashes on exit after loading a GDExtension it only discovered
+# during that same run, which is what a fresh checkout's first import does.
+# Listing the extensions beforehand makes Godot load them at startup, as it
+# does on every later run.
+$Library = Join-Path $Root "native\bin\libpixelspace.windows.x86_64.dll"
+if (-not (Test-Path $Library)) {
+	Write-Host "== The native gravity kernel is not built: $Library is missing."
+	Write-Host "   Build it first: cd native; scons platform=windows target=template_release godot_cpp=C:\path\to\godot-cpp"
+	exit 1
+}
+$GodotDir = Join-Path $Root ".godot"
+$ExtensionList = Join-Path $GodotDir "extension_list.cfg"
+if (-not (Test-Path $ExtensionList)) {
+	New-Item -ItemType Directory -Force -Path $GodotDir | Out-Null
+	Get-ChildItem -Path $Root -Recurse -Filter "*.gdextension" |
+		Where-Object { $_.FullName -notlike "*\.godot\*" -and $_.FullName -notlike "*\godot-cpp\*" } |
+		ForEach-Object { "res://" + $_.FullName.Substring($Root.Length + 1).Replace("\", "/") } |
+		Set-Content -Path $ExtensionList
 }
 
 Invoke-Step "import-first-pass" @("--headless", "--path", $Root, "--import")
