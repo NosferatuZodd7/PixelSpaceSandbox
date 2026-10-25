@@ -85,6 +85,8 @@ func _button(icon: StringName, tooltip_key: String) -> Button:
 	button.icon = PixelIcons.texture(icon)
 	button.tooltip_text = tooltip_key
 	button.focus_mode = Control.FOCUS_NONE
-	button.theme_type_variation = &"ArrowButton"
+	button.theme_type_variation = &"IconButton"
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.custom_minimum_size = Vector2(13, 13)
 	add_child(button)
 	return button

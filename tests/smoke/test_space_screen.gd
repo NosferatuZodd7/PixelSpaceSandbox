@@ -147,7 +147,11 @@ func test_clicking_a_planet_opens_an_inspect_window() -> void:
 		labels.append(row[0])
 	for expected: String in ["INSPECT_MASS", "INSPECT_GRAVITY", "INSPECT_LIGHT_TIME", "INSPECT_PERIOD", "INSPECT_IN_HABITABLE_ZONE"]:
 		assert_true(labels.has(expected), "shows %s" % expected)
-	_click(Vector2(10, 60))
+	# Empty space, beside the window (which keeps clear of the Earth).
+	var empty: Vector2 = Vector2(10, 60)
+	if _windows()[0].get_global_rect().grow(2.0).has_point(empty):
+		empty = Vector2(630, 60)
+	_click(empty)
 	await wait_frames(2)
 	assert_eq(_view.selected, -1, "clicking empty space deselects")
 	assert_eq(_windows().size(), 0, "and closes the window")
@@ -205,6 +209,18 @@ func test_moons_appear_when_zooming_in() -> void:
 	await wait_frames(2)
 	assert_true(_view.is_shown(moon), "close up the Moon appears")
 	assert_true(_view.screen_position(earth).distance_to(Vector2(320, 180)) < 1.5, "following keeps the Earth centred")
+
+
+func test_bodies_grow_a_little_when_zooming_in() -> void:
+	var earth: int = _index(&"earth")
+	var far: int = _view.display_radius(earth)
+	_view.follow(earth)
+	_view.camera.set_scale_now(5.0e4)
+	await wait_frames(2)
+	var near: int = _view.display_radius(earth)
+	assert_true(near > far, "close up the Earth is drawn bigger: %d px, %d from afar" % [near, far])
+	assert_true(near <= far * 2, "but at most twice as big")
+	assert_true(_view.is_shown(_index(&"moon")), "and the Moon still shows beside it")
 
 
 func test_true_scale_shows_real_sizes() -> void:

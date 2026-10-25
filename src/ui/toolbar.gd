@@ -3,9 +3,10 @@ extends PanelContainer
 ## The god-powers toolbar along the bottom: a row of tabs from
 ## data/power_tabs.json and, below them, the selected tab's powers from
 ## data/powers.json as pixel icons, with the chosen power's name and how to
-## use it. Tabs whose powers arrive later say in which milestone. Overlay
-## buttons switch a layer of the view on and off on their own; the world
-## laws button opens its panel; every other power is chosen one at a time.
+## use it on one line (and in the icon's tooltip). Tabs whose powers arrive
+## later are dimmed and say in which milestone. Overlay buttons switch a
+## layer of the view on and off on their own; the world laws button opens
+## its panel; every other power is chosen one at a time.
 
 signal tab_changed(index: int)
 ## The chosen power changed; empty when none is chosen.
@@ -26,6 +27,8 @@ var _power: Dictionary = {}
 var _power_row: HBoxContainer
 var _power_buttons: Dictionary[String, Button] = {}
 var _power_group: ButtonGroup
+## The chosen (or described) power's name, and how to use it or the tab's hint.
+var _name: Label
 var _content: Label
 
 
@@ -43,6 +46,12 @@ func _ready() -> void:
 	for power: Dictionary in _powers:
 		if power["action"] == "overlay":
 			overlays[StringName(str(power["overlay"]))] = bool(power.get("on", false))
+	var panel: StyleBoxFlat = get_theme_stylebox(&"panel").duplicate()
+	panel.content_margin_left = 6
+	panel.content_margin_right = 6
+	panel.content_margin_top = 4
+	panel.content_margin_bottom = 4
+	add_theme_stylebox_override(&"panel", panel)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 3)
 	add_child(column)
@@ -57,6 +66,7 @@ func _ready() -> void:
 		button.button_group = group
 		button.focus_mode = Control.FOCUS_NONE
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.theme_type_variation = &"LockedTab" if _is_locked(tabs[i]) else &"TabButton"
 		button.pressed.connect(select.bind(i))
 		row.add_child(button)
 		_buttons.append(button)
@@ -68,11 +78,15 @@ func _ready() -> void:
 	content.add_child(_power_row)
 	_power_group = ButtonGroup.new()
 	_power_group.allow_unpress = true
+	_name = Label.new()
+	_name.theme_type_variation = &"KeyLabel"
+	_name.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	content.add_child(_name)
 	_content = Label.new()
 	_content.theme_type_variation = &"DimLabel"
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_content.clip_text = true
+	_content.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	content.add_child(_content)
 	select(tabs.size() - 1)
 
@@ -88,8 +102,16 @@ func select(index: int) -> void:
 	tab_changed.emit(index)
 
 
+func tab_button(index: int) -> Button:
+	return _buttons[index]
+
+
+## What the line beside the icons says: "name  ·  how to use it", or the
+## tab's hint.
 func content_text() -> String:
-	return _content.text
+	if not _name.visible:
+		return _content.text
+	return "%s  %s" % [_name.text, _content.text]
 
 
 ## The ids of the current tab's powers, in order.
@@ -125,6 +147,7 @@ func cancel_power() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and _content != null:
 		_refresh()
+		_describe_buttons()
 
 
 func _build_power_row() -> void:
@@ -139,7 +162,8 @@ func _build_power_row() -> void:
 		var id: String = power["id"]
 		var button: Button = Button.new()
 		button.icon = PixelIcons.texture(StringName(str(power["icon"])))
-		button.tooltip_text = str(power["name_key"])
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		button.set_meta(&"power", power)
 		button.focus_mode = Control.FOCUS_NONE
 		button.theme_type_variation = &"IconButton"
 		match str(power["action"]):
@@ -161,6 +185,24 @@ func _build_power_row() -> void:
 		_power_buttons[id] = button
 	_power_row.visible = not _power_buttons.is_empty()
 	_content.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if _power_row.visible else HORIZONTAL_ALIGNMENT_CENTER
+	_describe_buttons()
+
+
+## Each icon's tooltip: the power's name and how to use it.
+func _describe_buttons() -> void:
+	for button: Button in _power_buttons.values():
+		var power: Dictionary = button.get_meta(&"power")
+		button.tooltip_text = "%s\n%s" % [tr(str(power["name_key"])), tr(str(power["hint_key"]))]
+
+
+## A tab with no powers yet and nothing else to say: its powers come later.
+func _is_locked(tab: Dictionary) -> bool:
+	if tab.has("hint_key"):
+		return false
+	for power: Dictionary in _powers:
+		if power["tab"] == tab.get("id"):
+			return false
+	return true
 
 
 func _set_power(id: String) -> void:
@@ -178,7 +220,13 @@ func _set_power(id: String) -> void:
 ## Shows a power's name and how to use it, without choosing it.
 func _describe(power: Dictionary) -> void:
 	if _power.is_empty():
-		_content.text = "%s  ·  %s" % [tr(str(power["name_key"])), tr(str(power["hint_key"]))]
+		_show(power)
+
+
+func _show(power: Dictionary) -> void:
+	_name.text = tr(str(power["name_key"]))
+	_name.visible = true
+	_content.text = "·  " + tr(str(power["hint_key"]))
 
 
 func _refresh() -> void:
@@ -186,8 +234,10 @@ func _refresh() -> void:
 		return
 	var tab: Dictionary = tabs[current]
 	if not _power.is_empty():
-		_content.text = "%s  ·  %s" % [tr(str(_power["name_key"])), tr(str(_power["hint_key"]))]
-	elif tab.has("hint_key"):
+		_show(_power)
+		return
+	_name.visible = false
+	if tab.has("hint_key"):
 		_content.text = tr(str(tab["hint_key"]))
 	else:
 		_content.text = Format.tr_units("TAB_COMING", str(int(tab.get("milestone", 1))))

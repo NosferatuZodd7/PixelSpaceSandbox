@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dkvgto8im5c3p"
-path="res://.godot/imported/Micro5-Regular.ttf-aea566c073eabbde43588f2e6847b48b.fontdata"
+uid="uid://dbouv7pclsf8y"
+path="res://.godot/imported/DepartureMono-Regular.otf-4d61a52e4f94f0c698e29ee11686be0f.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/micro5/Micro5-Regular.ttf"
-dest_files=["res://.godot/imported/Micro5-Regular.ttf-aea566c073eabbde43588f2e6847b48b.fontdata"]
+source_file="res://assets/fonts/departure_mono/DepartureMono-Regular.otf"
+dest_files=["res://.godot/imported/DepartureMono-Regular.otf-4d61a52e4f94f0c698e29ee11686be0f.fontdata"]
 
 [params]
 

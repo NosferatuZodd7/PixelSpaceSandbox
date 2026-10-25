@@ -307,9 +307,13 @@ func _draw_ruler() -> void:
 	var text: String = ruler_text()
 	var font: Font = UiTheme.body_font()
 	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE).x
-	var at: Vector2 = ((from + to) * 0.5 + Vector2(-width * 0.5, -6.0)).round()
-	at = at.clamp(Vector2(2, 12), view.camera.viewport_size - Vector2(width + 2.0, 48.0))
-	draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, Palette.color(&"ui_shadow"))
+	var at: Vector2 = ((from + to) * 0.5 + Vector2(-width * 0.5, -8.0)).round()
+	at = at.clamp(Vector2(5, 16), view.camera.viewport_size - Vector2(width + 5.0, 64.0))
+	# On a small panel, so the numbers read clearly over orbits and labels.
+	var ascent: float = font.get_ascent(UiTheme.BODY_SIZE)
+	var box: Rect2 = Rect2(at + Vector2(-4.0, -ascent - 1.0), Vector2(width + 8.0, font.get_height(UiTheme.BODY_SIZE) + 2.0))
+	draw_rect(box, Palette.color(&"ui_panel"))
+	UiTheme.draw_frame(self, box, Palette.color(&"ui_border"))
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, color)
 
 

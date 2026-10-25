@@ -1,12 +1,10 @@
 class_name SkyGenerator
 extends RefCounted
-## Builds the deep-space backdrop from a seed: nebula bands drawn with ordered
-## (Bayer) dithering and a field of pixel stars. Pure functions with no nodes,
-## safe to call from a worker thread, and deterministic: the same seed and size
-## always give the same sky.
-
-## 4×4 Bayer matrix: the threshold order for ordered dithering.
-const BAYER_4X4: Array[int] = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+## Builds the deep-space backdrop from a seed: nebula clouds in flat bands of
+## palette colour (no dithering: a grid of dots would break up the view) and
+## a field of pixel stars. Pure functions with no nodes, safe to call from a
+## worker thread, and deterministic: the same seed and size always give the
+## same sky.
 
 ## Palette ramps, darkest first. The first entry of each nebula ramp is the
 ## empty sky, so a band fades into the background.
@@ -83,7 +81,7 @@ static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary, stren
 	rng.seed = sky_seed
 
 	# Cloud detail and a slow "warp" that bends the bands.
-	var detail: PackedByteArray = _noise_bytes(sky_seed, size, 1.0 / 70.0, 5)
+	var detail: PackedByteArray = _noise_bytes(sky_seed, size, 1.0 / 70.0, 3)
 	var warp: PackedByteArray = _noise_bytes(sky_seed + 7919, size, 1.0 / 220.0, 2)
 
 	# Main purple band: a wide diagonal through the middle of the view.
@@ -106,11 +104,9 @@ static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary, stren
 	pixels.resize(width * height * 3)
 	var out: int = 0
 	for y: int in height:
-		var bayer_row: int = (y & 3) * 4
 		var gradient: float = float(y) / float(height)
 		for x: int in width:
 			var i: int = y * width + x
-			var threshold: float = (BAYER_4X4[bayer_row + (x & 3)] + 0.5) / 16.0
 			var cloud: float = detail[i] / 255.0
 			var bend: float = (warp[i] / 255.0 - 0.5) * warp_amount
 
@@ -120,16 +116,16 @@ static func nebula_image(sky_seed: int, size: Vector2i, ramps: Dictionary, stren
 			var v2: float = clampf((exp(-d2 * d2 * inv_width2_sq) * (0.2 + 0.9 * cloud) - 0.2) * strength, 0.0, 1.0)
 
 			var c: Color
-			var level: int = _dither(v1 * purple_top, threshold)
+			var level: int = roundi(v1 * purple_top)
 			if level > 0:
 				c = purple[level]
 			else:
-				level = _dither(v2 * blue_top, threshold)
+				level = roundi(v2 * blue_top)
 				if level > 0:
 					c = blue[level]
 				else:
 					var haze: float = clampf(0.55 + 0.35 * gradient + 0.25 * (cloud - 0.5), 0.0, 1.0)
-					c = background[_dither(haze * background_top, threshold)]
+					c = background[roundi(haze * background_top)]
 			pixels[out] = c.r8
 			pixels[out + 1] = c.g8
 			pixels[out + 2] = c.b8
@@ -165,12 +161,6 @@ static func star_field(sky_seed: int, size: Vector2i, count: int) -> StarField:
 		stars.phases.append(rng.randf_range(0.0, TAU))
 		stars.speeds.append(rng.randf_range(0.6, 2.4))
 	return stars
-
-
-## Picks the ramp step for a fractional level using a dither threshold.
-static func _dither(level: float, threshold: float) -> int:
-	var base: int = int(level)
-	return base + 1 if level - base > threshold else base
 
 
 static func _noise_bytes(noise_seed: int, size: Vector2i, frequency: float, octaves: int) -> PackedByteArray:

@@ -48,12 +48,37 @@ Pixel fonts are only sharp at the size their design grid was drawn for:
 
 | Font | Native size | Use |
 | --- | --- | --- |
-| Micro 5 | 11 px (line height 11, capitals 5 px) | Interface text |
-| Press Start 2P | 8 px, or multiples (16, 24…) | Titles, the big time counter |
+| Departure Mono | 11 px (line height 14, capitals 8 px, 7 px per letter) | Interface text and window headers |
+| Press Start 2P | 8 px, or multiples (16, 24…) | The game's title, the big date counter |
 
-Both import with antialiasing, hinting and subpixel positioning off. Micro 5
-was chosen over Tiny5 because its Portuguese accents (ã, õ, ç) stay readable
-at 5 px capitals.
+Both import with antialiasing, hinting and subpixel positioning off.
+Departure Mono replaced Micro 5 (capitals 5 px), which the owner found hard
+to read; it was the clearest of the open pixel fonts tried (Pixelify Sans,
+VT323, DotGothic16 and Jersey are not crisp at small sizes, Silkscreen is
+smaller still) and leaves three rows above capitals for accents. Window
+headers are capitals in Departure Mono, not in Press Start 2P, which
+squeezes accented capitals (É, Õ) into small letters; Press Start 2P stays
+for text without accents (the title and the dates). Tests check the
+capitals are at least 8 px and that header accents sit above the letter.
+
+### Interface layout
+
+Everything fits the 640×360 frame in English and Portuguese, which
+`test_layout` checks:
+
+- The toolbar's tabs are compact buttons in one row (`TabButton`); tabs
+  whose powers come in a later milestone are dimmed (`LockedTab`) and say
+  when. Beside the power icons, one line gives the chosen power's name (in
+  the accent colour) and how to use it; hints are kept short enough for
+  that line, and each icon's tooltip repeats them. Right click or Esc puts
+  a power away (said once, in the Cosmos hint).
+- Inspect windows stay between the time controls and the timeline, and
+  move to the other side of the screen when they would cover the body they
+  describe; their rows scroll when they would not fit.
+- Time buttons are boxed, 13 px square. The ruler's numbers sit on a small
+  panel so they read over orbits and names.
+- Panel and button borders contrast at least 3:1 with the panels (WCAG
+  non-text contrast); text contrasts at least 4.5:1.
 
 ### Colours
 
@@ -64,7 +89,9 @@ a colour value directly, or names a colour the palette does not have.
 
 Gradients and soft shapes are drawn with **ordered dithering** (4×4 Bayer
 matrix) between neighbouring palette colours, never with blended in-between
-colours.
+colours. The exception is the sky backdrop: its nebulae are flat bands of
+palette colour, because a regular grid of dots over the whole view broke up
+what is in front of it (the owner's call).
 
 ## Code layout and layers
 
@@ -179,7 +206,8 @@ creates fronts when the player changes the system:
 - `SpaceCamera`: centre and pixels per AU, zoom towards the cursor with
   easing, from 0.5 to 2×10⁷ px/AU.
 - Bodies are drawn larger than life (shrinking when zoomed out so they do
-  not crowd); **T** shows true scale. A moon appears once it is clear of its
+  not crowd, and growing up to twice when zoomed in, to show more of their
+  surface); **T** shows true scale. A moon appears once it is clear of its
   planet's disc.
 - `BodySprite`: one shader (`planet_disc.gdshader`) wraps a small surface map
   on a sphere, spins it, and lights it from the star with a dithered
@@ -192,8 +220,9 @@ creates fronts when the player changes the system:
   an exact arc around its body instead, so the line passes through it at any
   zoom.
 - Names never cover bodies, each other, the counter or the toolbar.
-- The habitable zone is a dithered green band whose fill fades out when it
-  is much wider than the screen. Since milestone 2 a shader
+- The habitable zone is a dithered green band (one pixel in eight filled,
+  so what is inside stays clear) whose fill fades out when it is much wider
+  than the screen. Since milestone 2 a shader
   (`habitable_zone.gdshader`) draws it from the starlight of every star (up
   to 8) as seen from the middle of the screen: where a planet would get
   between 0.53 and 1.1 times the Earth's light. One star gives a ring; two
@@ -529,7 +558,7 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 | # | Decision | Date |
 | --- | --- | --- |
 | 1 | Godot 4.7.2 stable, Compatibility renderer, ANGLE fallback on Windows | 2026-10 |
-| 2 | Micro 5 (11 px) for interface text, Press Start 2P (8 px multiples) for titles | 2026-10 |
+| 2 | Micro 5 (11 px) for interface text, Press Start 2P (8 px multiples) for titles (replaced by 21) | 2026-10 |
 | 3 | Own minimal headless test runner instead of a third-party framework | 2026-10 |
 | 4 | Interface text in a CSV (`locale/ui.csv`), English and Portuguese (Portugal) | 2026-10 |
 | 5 | Default key bindings in `data/input_bindings.json`; rebinding stores only overrides | 2026-10 |
@@ -548,3 +577,6 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 | 18 | The habitable zone is drawn from the summed light of every star, not as one ring per star | 2026-10 |
 | 19 | Collisions merge bodies; a pass inside the Roche limit (rigid-body factor 2) tears the lighter body into a ring; both found by the kernels at every step | 2026-10 |
 | 20 | The game updates itself from GitHub releases: every push to `beta` is a test build; channels test/final/off; SHA-256 checked; files swapped by renaming (owner's request, as in OrbisLink) | 2026-10 |
+| 21 | Departure Mono (11 px) for interface text and window headers; Press Start 2P only for the title and the date (owner found Micro 5 hard to read) | 2026-10 |
+| 22 | No dithering in the sky backdrop: nebulae in flat bands of colour (owner's request) | 2026-10 |
+| 23 | Builds only for code pushes to `main`/`beta`, tags and manual runs; documentation-only pushes and pull requests do not build (to save Actions minutes) | 2026-10 |

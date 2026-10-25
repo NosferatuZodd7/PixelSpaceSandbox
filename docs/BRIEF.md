@@ -59,9 +59,10 @@ There is no map editor: worlds come from the system generator and the presets.
   (Godot resources or JSON), not in code, so content and mods can be added later.
 
 ## Visual style
-- Deep space in dark navy/indigo with purple nebula bands drawn with ordered
-  dithering, small twinkling stars of a few pixels, a limited palette (one shared
-  palette file, all colours taken from it).
+- Deep space in dark navy/indigo with purple nebula bands in flat bands of
+  colour (no dithering in the backdrop: the owner's choice, 2026-10), small
+  twinkling stars of a few pixels, a limited palette (one shared palette file,
+  all colours taken from it).
 - Stars: discs coloured by temperature, with a soft glow made from additive
   sprites; red giants big and dim, white dwarfs tiny and bright. Black holes: a
   dark disc with a thin bright accretion ring. Planetary rings as dithered bands.

@@ -27,7 +27,7 @@ technical design in [docs/DESIGN.md](docs/DESIGN.md).
   are errors), tabs for indentation.
 - `src/sim/` never depends on nodes, the palette or the renderer.
 - Colours only through `Palette.color(&"id")`; fonts at their native sizes
-  (Micro 5 at 11 px, Press Start 2P at 8 px multiples).
+  (Departure Mono at 11 px, Press Start 2P at 8 px multiples).
 - Content goes in `data/`, not in code.
 - Assets: procedural, or CC0/OFL/MIT only, each recorded in
   `docs/CREDITS.md`.

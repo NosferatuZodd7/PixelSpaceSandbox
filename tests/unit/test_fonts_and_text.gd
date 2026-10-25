@@ -46,6 +46,39 @@ func test_fonts_land_on_whole_pixels_at_their_sizes() -> void:
 	assert_eq(UiTheme.display_font().get_string_size("A", HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x, 8.0, "Press Start 2P is 8 px wide at 8 px")
 
 
+## Interface text must be easy to read: capitals at least 8 px tall (16 on
+## a 1280×720 screen) and room above them for Portuguese accents.
+func test_body_text_is_large_enough_to_read() -> void:
+	var font: FontFile = UiTheme.body_font() as FontFile
+	var server: TextServer = TextServerManager.get_primary_interface()
+	var rid: RID = font.get_rids()[0]
+	var size: Vector2i = Vector2i(UiTheme.BODY_SIZE, 0)
+	var capital: int = server.font_get_glyph_index(rid, UiTheme.BODY_SIZE, "H".unicode_at(0), 0)
+	# Glyph images carry one pixel of padding on every side.
+	var cap_height: float = server.font_get_glyph_size(rid, size, capital).y - 2.0
+	assert_true(cap_height >= 8.0, "capitals are %d px tall" % cap_height)
+	var accented: int = server.font_get_glyph_index(rid, UiTheme.BODY_SIZE, "Ã".unicode_at(0), 0)
+	var top: float = -server.font_get_glyph_offset(rid, size, accented).y - 1.0
+	assert_true(top <= font.get_ascent(UiTheme.BODY_SIZE), "accents on capitals stay inside the line")
+
+
+## Window headers are in capitals ("VÉNUS", "DEFINIÇÕES"): their font must
+## draw accented capitals with the accent above the letter, not squeezed
+## into a small letter.
+func test_headers_keep_accents_above_capitals() -> void:
+	var theme: Theme = UiTheme.shared()
+	var font: FontFile = theme.get_font(&"font", &"HeaderLabel") as FontFile
+	var size: int = theme.get_font_size(&"font_size", &"HeaderLabel")
+	var server: TextServer = TextServerManager.get_primary_interface()
+	var rid: RID = font.get_rids()[0]
+	for pair: String in ["EÉ", "UÚ", "OÕ", "AÃ"]:
+		var heights: Array[float] = []
+		for character: String in pair:
+			var glyph: int = server.font_get_glyph_index(rid, size, character.unicode_at(0), 0)
+			heights.append(server.font_get_glyph_size(rid, Vector2i(size, 0), glyph).y)
+		assert_true(heights[1] > heights[0], "%s: '%s' is taller than '%s'" % [font.get_font_name(), pair[1], pair[0]])
+
+
 func test_fonts_cover_portuguese() -> void:
 	for font: FontFile in _fonts():
 		for character: String in PORTUGUESE:

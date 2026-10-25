@@ -9,6 +9,7 @@ extends SceneTree
 ##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
 ##   [--overlays=gravity,hill,-orbits] (show, or hide with a leading -)
 ##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y] [--smart=on]
+##   [--tab=tools] [--laws=open]
 ## For the title screen: [--update=available] shows the update notice as
 ## when a newer build is out.
 ## --power chooses a god power; --click uses it at a screen pixel (with
@@ -61,6 +62,17 @@ func _capture() -> void:
 	var deadline: int = Time.get_ticks_msec() + 20000
 	while sky != null and sky.is_generating() and Time.get_ticks_msec() < deadline:
 		await process_frame
+	if view != null and args.has("select"):
+		# Once the camera has drawn a frame, so the window knows where the body is.
+		await process_frame
+		view.select(view.simulation.system.index_of(StringName(args["select"])))
+	if view != null and args.has("tab"):
+		var toolbar: Toolbar = scene.get_node("UI/Root/Toolbar")
+		for index: int in toolbar.tabs.size():
+			if toolbar.tabs[index].get("id") == args["tab"]:
+				toolbar.select(index)
+	if view != null and args.get("laws", "") == "open":
+		(scene.get_node("UI/Root/Toolbar") as Toolbar).laws_requested.emit()
 	if view != null and args.has("power"):
 		await _use_power(scene, args)
 	if args.get("smart", "") == "on" and scene.has_method(&"set_smart_time"):
@@ -95,8 +107,6 @@ func _set_up_view(scene: Node, view: SpaceView, args: Dictionary[String, String]
 		var followed: int = system.index_of(StringName(args["follow"]))
 		view.follow(followed)
 		view.camera.look_at(system.x(followed), system.y(followed))
-	if args.has("select"):
-		view.select(system.index_of(StringName(args["select"])))
 	if args.has("overlays"):
 		for overlay: String in args["overlays"].split(","):
 			if scene.has_method(&"set_overlay"):
@@ -109,7 +119,10 @@ func _set_up_view(scene: Node, view: SpaceView, args: Dictionary[String, String]
 
 func _use_power(scene: Node, args: Dictionary[String, String]) -> void:
 	var toolbar: Toolbar = scene.get_node("UI/Root/Toolbar")
-	toolbar.select(0)
+	for index: int in toolbar.tabs.size():
+		toolbar.select(index)
+		if toolbar.power_ids().has(args["power"]):
+			break
 	toolbar.choose_power(args["power"])
 	await process_frame
 	if not args.has("click"):

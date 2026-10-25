@@ -275,12 +275,22 @@ func _on_selection_changed(index: int) -> void:
 		return
 	if current == null:
 		current = InspectWindow.new()
+		current.area = _window_area()
 		_window_layer.add_child(current)
 		current.closed.connect(_on_window_closed)
-		current.position = Vector2(_root.size.x - InspectWindow.WIDTH - 6 - 10 * _windows.size(), 40 + 10 * _windows.size())
+		current.position = Vector2(current.area.end.x - InspectWindow.WIDTH - 10 * _windows.size(), current.area.position.y + 10 * _windows.size())
 		_windows.append(current)
 	current.show_body(simulation, index)
+	current.keep_clear_of(_view.screen_position(index))
 	current.move_to_front()
+
+
+## Inspect windows go below the time counter and above the timeline and
+## the toolbar.
+func _window_area() -> Rect2:
+	var top: float = _time_controls.get_global_rect().end.y + 2.0
+	var bottom: float = _timeline_bar.get_global_rect().position.y - 2.0
+	return Rect2(6.0, top, _root.size.x - 12.0, bottom - top)
 
 
 func _on_window_closed(window: InspectWindow) -> void:

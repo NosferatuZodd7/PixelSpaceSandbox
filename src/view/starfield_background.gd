@@ -1,6 +1,7 @@
 class_name StarfieldBackground
 extends Node2D
-## Deep-space backdrop: dithered nebula bands and twinkling pixel stars.
+## Deep-space backdrop: nebula clouds in flat colour bands and twinkling
+## pixel stars.
 ##
 ## The nebula is rendered on a worker thread so changing the sky never stalls
 ## a frame; the old sky stays on screen until the new one is ready.

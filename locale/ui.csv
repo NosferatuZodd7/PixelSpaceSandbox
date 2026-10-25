@@ -146,23 +146,23 @@ TIME_FOLLOW_WAVE,Follow the wave (G),Seguir a onda (G)
 TOOL_ORBITS,Orbits,Órbitas
 TOOL_ORBITS_HINT,Show or hide the orbits,Mostrar ou esconder as órbitas
 TOOL_FRONTS,Light and gravity fronts,Frentes de luz e gravidade
-TOOL_FRONTS_HINT,Show or hide the news of each change as it spreads,Mostrar ou esconder a notícia de cada mudança a espalhar-se
+TOOL_FRONTS_HINT,"The news of each change, spreading",A notícia de cada mudança
 TOOL_HZ,Habitable zone,Zona habitável
-TOOL_HZ_HINT,Show or hide where liquid water could last,Mostrar ou esconder onde a água líquida pode durar
+TOOL_HZ_HINT,Where liquid water could last,Onde a água líquida pode durar
 TOOL_GHOSTS,Ghost trajectories,Trajetórias-fantasma
-TOOL_GHOSTS_HINT,After a change: where each body would have gone without it,Depois de uma mudança: por onde cada corpo teria ido sem ela
+TOOL_GHOSTS_HINT,Where each body would go without the change,Por onde iria cada corpo sem a mudança
 TOOL_HILL,Hill spheres and Roche limits,Esferas de Hill e limites de Roche
-TOOL_HILL_HINT,Where each body holds its moons · where it tears them apart,Onde cada corpo segura as luas · onde as desfaz
+TOOL_HILL_HINT,Moons: held or torn apart,Luas: seguras ou desfeitas
 TOOL_LAGRANGE,Lagrange points,Pontos de Lagrange
 TOOL_LAGRANGE_HINT,Of the selected body and what it circles,Do corpo selecionado e do que ele orbita
 TOOL_GRAVITY,Gravity field,Campo gravítico
-TOOL_GRAVITY_HINT,How strongly everything pulls · brighter is stronger,A força da gravidade de tudo · mais claro é mais forte
+TOOL_GRAVITY_HINT,Brighter pulls harder,Mais claro puxa mais
 TOOL_TEMPERATURE,Temperature,Temperatura
 TOOL_TEMPERATURE_HINT,How warm a planet would be there,Quão quente um planeta estaria ali
 TOOL_RULER,Ruler,Régua
-TOOL_RULER_HINT,Drag to measure · from a body to follow it · right click: cancel,Arrasta para medir · a partir de um corpo para o seguir · botão direito: cancela
+TOOL_RULER_HINT,Drag to measure · from a body to follow it,Arrasta para medir · de um corpo para o seguir
 TOOL_PULSE,Light pulse,Pulso de luz
-TOOL_PULSE_HINT,Click a body: a ring of light leaves it · right click: cancel,Clica num corpo: sai dele um anel de luz · botão direito: cancela
+TOOL_PULSE_HINT,Click a body: a ring of light leaves it,Clica num corpo: sai dele um anel de luz
 TOOL_LAWS,World laws,Leis do mundo
 TOOL_LAWS_HINT,The rules of this universe,As regras deste universo
 FRONT_PULSE,Light from %s,Luz de %s
@@ -173,7 +173,7 @@ LAW_LIGHT_REAL,Real,Real
 LAW_LIGHT_10,10x slower,10x mais lenta
 LAW_LIGHT_1000,1000x slower,1000x mais lenta
 LAW_LIGHT_INSTANT,Instant,Instantânea
-LAW_LIGHT_FICTION,"Fiction: what if light were %s times slower? Changes take that much longer to be felt.","Ficção: e se a luz fosse %s vezes mais lenta? As mudanças demoram outro tanto a ser sentidas."
+LAW_LIGHT_FICTION,Fiction: what if light were %s times slower? Changes take that much longer to be felt.,Ficção: e se a luz fosse %s vezes mais lenta? As mudanças demoram outro tanto a ser sentidas.
 LAW_COLLISIONS,Collisions,Colisões
 LAW_ON,On,Ligadas
 LAW_OFF,Off,Desligadas
@@ -188,14 +188,15 @@ SNAPSHOT_AUTO,Snapshot,Fotografia
 SNAPSHOT_BEFORE,Before a change (Ctrl+Z goes back),Antes de uma mudança (Ctrl+Z volta atrás)
 TAB_COSMOS,Cosmos,Cosmos
 TAB_TERRAIN,Terrain,Terreno
-TAB_WEATHER,Weather and nature,Clima e natureza
+TAB_WEATHER,Weather,Clima
 TAB_LIFE,Life,Vida
 TAB_CIVILIZATIONS,Civilizations,Civilizações
 TAB_DISASTERS,Disasters,Desastres
 TAB_TOOLS,Tools,Ferramentas
 TAB_INSPECT,Inspect,Inspecionar
 TAB_COMING,These powers arrive in milestone %s.,Estes poderes chegam no marco %s.
-TAB_COSMOS_HINT,Pick a power to shape the system,Escolhe um poder para moldar o sistema
+TAB_TOOLS_HINT,Layers to show and tools to measure,Camadas para ver e ferramentas para medir
+TAB_COSMOS_HINT,Pick a power · right click or Esc puts it away,Escolhe um poder · botão direito ou Esc larga-o
 TAB_INSPECT_HINT,Click a body to inspect it · double-click or F to follow it,Clica num corpo para o inspecionar · duplo clique ou F para o seguir
 POWER_SUN_LIKE_STAR,Sun-like star,Estrela como o Sol
 POWER_RED_DWARF,Red dwarf,Anã vermelha
@@ -208,10 +209,10 @@ POWER_MOON,Moon,Lua
 POWER_ROGUE_PLANET,Rogue planet,Planeta errante
 POWER_FLING,Fling,Atirar
 POWER_DELETE,Delete,Apagar
-POWER_PLACE_HINT,Click: circular orbit · drag: throw · right click: cancel,Clica: órbita circular · arrasta: lança · botão direito: cancela
-POWER_ROGUE_HINT,Click: it sweeps through here · drag: aim · right click: cancel,Clica: passa por aqui · arrasta: aponta · botão direito: cancela
-POWER_FLING_HINT,Drag a body to throw it · right click: cancel,Arrasta um corpo para o atirar · botão direito: cancela
-POWER_DELETE_HINT,Click a body to remove it · right click: cancel,Clica num corpo para o apagar · botão direito: cancela
+POWER_PLACE_HINT,Click: circular orbit · drag: throw,Clica: órbita circular · arrasta: lança
+POWER_ROGUE_HINT,Click: it sweeps through here · drag: aim,Clica: passa por aqui · arrasta: aponta
+POWER_FLING_HINT,Drag a body to throw it,Arrasta um corpo para o atirar
+POWER_DELETE_HINT,Click a body to remove it,Clica num corpo para o apagar
 PLACED_STAR,Star %s,Estrela %s
 PLACED_BLACK_HOLE,Black hole %s,Buraco negro %s
 PLACED_PLANET,Planet %s,Planeta %s

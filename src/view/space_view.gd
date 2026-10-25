@@ -12,11 +12,17 @@ extends Node2D
 signal selection_changed(index: int)
 
 const HZ_SHADER: Shader = preload("res://assets/shaders/habitable_zone.gdshader")
+## Share of the habitable zone's pixels that are filled: light enough to
+## see the planets and orbits through it.
+const HZ_DENSITY: float = 0.125
 ## The habitable zone is drawn from this many stars at most (the shader's).
 const HZ_MAX_STARS: int = 8
 const ZOOM_STEP: float = 1.25
 const PAN_SPEED: float = 280.0
 const DEFAULT_SCALE: float = 100.0
+## How fast bodies grow as the camera zooms in past DEFAULT_SCALE: twice
+## as big at 300 times the zoom.
+const ZOOM_GROWTH: float = 0.12
 const ORBIT_POINTS: int = 160
 const MOON_ORBIT_POINTS: int = 72
 const DASH_ON: float = 3.0
@@ -247,19 +253,22 @@ func display_radius(index: int) -> int:
 	if true_scale:
 		return maxi(roundi(true_px), 0)
 	var radius_km: float = Units.km_from_au(b.radius)
-	# Zoomed out, the enlarged discs shrink so they do not crowd each other.
-	var shrink: float = clampf(pow(camera.scale / DEFAULT_SCALE, 0.3), 0.45, 1.0)
+	# Zoomed out, the enlarged discs shrink so they do not crowd each other;
+	# zoomed in, they grow (up to twice) to show more of their surface.
+	var zoom: float = camera.scale / DEFAULT_SCALE
+	var shrink: float = clampf(pow(zoom, 0.3), 0.45, 1.0)
+	var grow: float = clampf(pow(zoom, ZOOM_GROWTH), 1.0, 2.0)
 	var base: float
 	match b.kind:
 		CelestialBody.Kind.STAR:
 			# The Sun at 10 pixels; dwarfs smaller, giants bigger.
-			base = clampf(10.0 * pow(radius_km / Units.SOLAR_RADIUS_KM, 0.25), 3.0, 16.0) * shrink
+			base = clampf(10.0 * pow(radius_km / Units.SOLAR_RADIUS_KM, 0.25), 3.0, 16.0) * shrink * grow
 		CelestialBody.Kind.BLACK_HOLE:
 			base = 3.0
 		CelestialBody.Kind.PLANET:
-			base = maxf(1.5, clampf(1.5 + 1.25 * log(radius_km / 1000.0) / log(2.0), 2.0, 9.0) * shrink)
+			base = maxf(1.5, clampf(1.5 + 1.25 * log(radius_km / 1000.0) / log(2.0), 2.0, 9.0) * shrink) * grow
 		_:
-			base = clampf(1.2 + 1.0 * log(radius_km / 1000.0) / log(2.0), 1.0, 3.0)
+			base = clampf(1.2 + 1.0 * log(radius_km / 1000.0) / log(2.0), 1.0, 3.0) * grow
 	return mini(roundi(maxf(true_px, base)), 100000)
 
 
@@ -359,7 +368,7 @@ func _draw_habitable_zone() -> void:
 	hz_material.set_shader_parameter(&"stars", stars)
 	hz_material.set_shader_parameter(&"luminosity", shine)
 	hz_material.set_shader_parameter(&"scale", camera.scale)
-	hz_material.set_shader_parameter(&"density", 0.25 * clampf(1.0 - (band - 400.0) / 1200.0, 0.0, 1.0))
+	hz_material.set_shader_parameter(&"density", HZ_DENSITY * clampf(1.0 - (band - 400.0) / 1200.0, 0.0, 1.0))
 	_hz.draw_rect(view, Palette.color(&"white"))
 
 

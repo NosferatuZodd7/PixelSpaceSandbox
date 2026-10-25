@@ -54,7 +54,7 @@
 		{ "id": "city_light", "hex": "#ffca5a", "group": "life" },
 		{ "id": "ui_panel", "hex": "#161940", "group": "ui" },
 		{ "id": "ui_panel_light", "hex": "#24295a", "group": "ui" },
-		{ "id": "ui_border", "hex": "#4a5196", "group": "ui" },
+		{ "id": "ui_border", "hex": "#6068b8", "group": "ui" },
 		{ "id": "ui_accent", "hex": "#ffd148", "group": "ui" },
 		{ "id": "ui_ok", "hex": "#58d488", "group": "ui" },
 		{ "id": "ui_warn", "hex": "#ffa638", "group": "ui" },

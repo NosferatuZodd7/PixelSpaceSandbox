@@ -13,14 +13,22 @@
 # * a pushed vX.Y.Z tag (equal to project.godot's version) becomes a final
 #   release, seen on both channels.
 # Each release carries a zip per system and its SHA-256, which the game
-# checks before installing. Builds are also in each run's "Artifacts".
+# checks before installing. Builds are also in each run's "Artifacts"
+# (kept a week).
+#
+# To spend few Actions minutes: pushes that only change documentation do
+# not build, there is no separate pull-request build (work lands on beta
+# directly), and a newer push cancels the build of the one before.
 name: Build
 
 on:
   push:
     branches: [main, beta]
     tags: ["v*"]
-  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE*"
   workflow_dispatch:
 
 permissions:
@@ -142,18 +150,21 @@ jobs:
           name: PixelSpaceSandbox-windows
           path: build/windows/
           if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: PixelSpaceSandbox-linux
           path: build/linux/
           if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: release
           path: release/
           if-no-files-found: error
+          retention-days: 7
 
   run-on-windows:
     needs: test-and-export
@@ -250,6 +261,7 @@ jobs:
             after-update.log
             windows-screenshot.png
           if-no-files-found: ignore
+          retention-days: 7
 
   publish:
     needs: [test-and-export, run-on-windows]

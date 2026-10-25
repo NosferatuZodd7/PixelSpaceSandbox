@@ -54,6 +54,22 @@ func test_nebula_is_not_empty_sky() -> void:
 	assert_true(share > 0.05 and share < 0.8, "nebula covers %d%% of the sky" % roundi(share * 100.0))
 
 
+## No regular grid of dots: the clouds are smooth bands of colour, so a
+## pixel unlike all four of its neighbours (a lone dot) is rare.
+func test_nebula_has_no_dot_pattern() -> void:
+	for sky_seed: int in [7, 2026]:
+		var image: Image = SkyGenerator.nebula_image(sky_seed, SIZE, SkyGenerator.default_ramps(), 0.45)
+		var dots: int = 0
+		for y: int in range(1, SIZE.y - 1):
+			for x: int in range(1, SIZE.x - 1):
+				var c: Color = image.get_pixel(x, y)
+				if c != image.get_pixel(x - 1, y) and c != image.get_pixel(x + 1, y) \
+						and c != image.get_pixel(x, y - 1) and c != image.get_pixel(x, y + 1):
+					dots += 1
+		var share: float = dots / float(SIZE.x * SIZE.y)
+		assert_true(share < 0.005, "seed %d: %.1f%% of the pixels are lone dots" % [sky_seed, share * 100.0])
+
+
 func test_star_field_is_deterministic_and_inside_the_view() -> void:
 	var a: SkyGenerator.StarField = SkyGenerator.star_field(5, SIZE, 100)
 	var b: SkyGenerator.StarField = SkyGenerator.star_field(5, SIZE, 100)

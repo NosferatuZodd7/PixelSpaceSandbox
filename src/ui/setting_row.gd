@@ -5,7 +5,7 @@ extends HBoxContainer
 ## The row takes keyboard focus as a whole: left and right (or Enter, or a
 ## click on an arrow) change the value, wrapping around.
 
-const VALUE_WIDTH: int = 104
+const VALUE_WIDTH: int = 120
 
 var _options: PackedStringArray = []
 var _read: Callable
@@ -22,7 +22,7 @@ func setup(name_key: String, options: PackedStringArray, translate: bool, read: 
 	_write = write
 	focus_mode = Control.FOCUS_ALL
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_constant_override(&"separation", 2)
+	add_theme_constant_override(&"separation", 6)
 
 	var name_label: Label = Label.new()
 	name_label.text = name_key

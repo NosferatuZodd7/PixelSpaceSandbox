@@ -2,7 +2,8 @@ class_name InspectWindow
 extends PanelContainer
 ## A window describing one body, with live values. Drag it by its title;
 ## pin it to keep it open while inspecting other bodies; close it with ×.
-## It closes by itself when its body is removed.
+## It closes by itself when its body is removed. It stays inside its area
+## of the screen, and its rows scroll when they would not fit there.
 
 signal closed(window: InspectWindow)
 signal pin_changed(window: InspectWindow)
@@ -20,9 +21,15 @@ const KIND_KEYS: Dictionary[CelestialBody.Kind, String] = {
 var simulation: Simulation
 var body_index: int = -1
 var pinned: bool = false
+## Where on the screen the window may be (the whole screen by default).
+var area: Rect2 = Rect2()
+## A point the window must not cover: where its body was when shown.
+var _clear_of: Vector2 = Vector2(NAN, NAN)
 
 var _title: Label
 var _pin: Button
+var _header: HBoxContainer
+var _scroll: ScrollContainer
 var _rows: GridContainer
 var _since_refresh: float = 0.0
 var _dragging: bool = false
@@ -39,6 +46,7 @@ func _ready() -> void:
 	header.mouse_filter = Control.MOUSE_FILTER_PASS
 	header.gui_input.connect(_header_input)
 	column.add_child(header)
+	_header = header
 	_title = Label.new()
 	_title.theme_type_variation = &"HeaderLabel"
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -56,11 +64,16 @@ func _ready() -> void:
 	close.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	close.pressed.connect(close_window)
 	header.add_child(close)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(_scroll)
 	_rows = GridContainer.new()
 	_rows.columns = 2
-	_rows.add_theme_constant_override(&"h_separation", 6)
+	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rows.add_theme_constant_override(&"h_separation", 10)
 	_rows.add_theme_constant_override(&"v_separation", 0)
-	column.add_child(_rows)
+	_scroll.add_child(_rows)
+	resized.connect(_keep_inside)
 
 
 func show_body(sim: Simulation, index: int) -> void:
@@ -205,6 +218,37 @@ func _fill(values: Array[PackedStringArray]) -> void:
 	for k: int in values.size():
 		(children[k * 2] as Label).text = values[k][0]
 		(children[k * 2 + 1] as Label).text = values[k][1]
+	_fit_rows()
+
+
+## As tall as the rows, unless that would not fit in the area: then the
+## rows scroll.
+func _fit_rows() -> void:
+	var rows_height: float = _rows.get_combined_minimum_size().y
+	if area.has_area():
+		var panel: StyleBox = get_theme_stylebox(&"panel")
+		var chrome: float = panel.get_minimum_size().y + _header.get_combined_minimum_size().y + 4.0
+		rows_height = minf(rows_height, area.size.y - chrome)
+	_scroll.custom_minimum_size.y = rows_height
+	var bar: float = _scroll.get_v_scroll_bar().get_combined_minimum_size().x
+	_scroll.custom_minimum_size.x = _rows.get_combined_minimum_size().x + (bar if rows_height < _rows.get_combined_minimum_size().y else 0.0)
+
+
+## Keeps the window off a point of the screen (its body), moving it to the
+## other side of the area when it would cover it.
+func keep_clear_of(point: Vector2) -> void:
+	_clear_of = point
+	_keep_inside()
+
+
+func _keep_inside() -> void:
+	if not area.has_area():
+		return
+	var limit: Vector2 = (area.end - size).max(area.position)
+	position = position.clamp(area.position, limit).round()
+	if not is_nan(_clear_of.x) and Rect2(position, size).grow(8.0).has_point(_clear_of):
+		var left: bool = _clear_of.x > area.get_center().x
+		position.x = area.position.x if left else limit.x
 
 
 func _mass_text(mass: float) -> String:
@@ -237,6 +281,8 @@ func _header_input(event: InputEvent) -> void:
 		return
 	var motion: InputEventMouseMotion = event as InputEventMouseMotion
 	if motion != null and _dragging:
-		var limit: Vector2 = get_viewport_rect().size - size
-		position = (position + motion.relative).clamp(Vector2.ZERO, limit.max(Vector2.ZERO)).round()
+		position += motion.relative
+		if not area.has_area():
+			area = get_viewport_rect()
+		_keep_inside()
 		accept_event()

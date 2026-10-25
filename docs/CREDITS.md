@@ -16,8 +16,8 @@ Exoplanet Archive) and is cited here too.
 
 | Font | Author | Licence | Source | Used for |
 | --- | --- | --- | --- | --- |
-| Micro 5 | Sarah Cadigan-Fried (The Soft Type Project Authors) | SIL OFL 1.1 — `assets/fonts/micro5/OFL.txt` | https://github.com/scfried/soft-type-micro, via Google Fonts (`ofl/micro5`, google/fonts commit `66928797f271`) | Interface text, at 11 px |
-| Press Start 2P | CodeMan38 (The Press Start 2P Project Authors) | SIL OFL 1.1, Reserved Font Name "Press Start 2P" — `assets/fonts/press_start_2p/OFL.txt` | https://fonts.google.com/specimen/Press+Start+2P, via Google Fonts (`ofl/pressstart2p`, google/fonts commit `66928797f271`) | Titles and big counters, at 8 px multiples |
+| Departure Mono 1.500 | Helena Zhang | SIL OFL 1.1 — `assets/fonts/departure_mono/OFL.txt` | https://departuremono.com, file `public/assets/DepartureMono-Regular.otf` of https://github.com/rektdeckard/departure-mono (branch `main`, 2026-10-25; SHA-256 `4d53f663155cf8bf7ffc8e688776e719625f7bbb80a8d90073438b249261a2e0`) | Interface text and window headers, at 11 px |
+| Press Start 2P | CodeMan38 (The Press Start 2P Project Authors) | SIL OFL 1.1, Reserved Font Name "Press Start 2P" — `assets/fonts/press_start_2p/OFL.txt` | https://fonts.google.com/specimen/Press+Start+2P, via Google Fonts (`ofl/pressstart2p`, google/fonts commit `66928797f271`) | The game's title and the big date counter, at 16 px |
 
 Both fonts are shipped unmodified.
 

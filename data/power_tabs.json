@@ -7,7 +7,7 @@
 		{ "id": "life", "name_key": "TAB_LIFE", "milestone": 6 },
 		{ "id": "civilizations", "name_key": "TAB_CIVILIZATIONS", "milestone": 7 },
 		{ "id": "disasters", "name_key": "TAB_DISASTERS", "milestone": 6 },
-		{ "id": "tools", "name_key": "TAB_TOOLS", "milestone": 2 },
+		{ "id": "tools", "name_key": "TAB_TOOLS", "milestone": 2, "hint_key": "TAB_TOOLS_HINT" },
 		{ "id": "inspect", "name_key": "TAB_INSPECT", "milestone": 1, "hint_key": "TAB_INSPECT_HINT" }
 	]
 }
