@@ -64,6 +64,12 @@ func _build_rows() -> void:
 	_add_row("SETTING_VSYNC", ["VSYNC_OFF", "VSYNC_ON"], true,
 		func() -> int: return 1 if _settings.vsync else 0,
 		func(index: int) -> void: _settings.change(&"vsync", index == 1))
+	var channels: Array[UpdateChecker.Channel] = [
+		UpdateChecker.Channel.TESTING, UpdateChecker.Channel.STABLE, UpdateChecker.Channel.OFF,
+	]
+	_add_row("SETTING_UPDATES", ["UPDATES_TESTING", "UPDATES_STABLE", "UPDATES_OFF"], true,
+		func() -> int: return channels.find(_settings.update_channel),
+		func(index: int) -> void: _settings.change(&"update_channel", channels[index]))
 
 
 func _add_row(name_key: String, options: PackedStringArray, translate: bool, read: Callable, write: Callable) -> void:

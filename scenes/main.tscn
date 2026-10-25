@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://src/ui/title_screen.gd" id="1_title"]
 [ext_resource type="Script" path="res://src/view/starfield_background.gd" id="2_sky"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="3_settings"]
+[ext_resource type="Script" path="res://src/ui/update_notice.gd" id="4_update"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_title")
@@ -102,3 +103,15 @@ theme_type_variation = &"DimLabel"
 auto_translate_mode = 2
 text = "v0.0.0"
 horizontal_alignment = 2
+
+[node name="UpdateNotice" type="HBoxContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -22.0
+offset_right = 360.0
+offset_bottom = -4.0
+grow_vertical = 0
+script = ExtResource("4_update")

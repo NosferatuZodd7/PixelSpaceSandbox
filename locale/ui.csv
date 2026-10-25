@@ -1,7 +1,7 @@
 keys,en,pt_PT
 LANGUAGE_NAME,English,Português
 TITLE_TAGLINE,A universe sandbox in pixel art,"Um universo para brincar, em pixel art"
-MILESTONE_LABEL,Milestone 1 · a system on screen,Marco 1 · um sistema no ecrã
+MILESTONE_LABEL,Milestone 2 · gravity sandbox,Marco 2 · caixa de areia gravitacional
 MENU_NEW_SYSTEM,New system,Novo sistema
 MENU_SETTINGS,Settings,Definições
 MENU_QUIT,Quit,Sair
@@ -123,6 +123,23 @@ MONTH_9,SEP,SET
 MONTH_10,OCT,OUT
 MONTH_11,NOV,NOV
 MONTH_12,DEC,DEZ
+SETTING_UPDATES,Updates,Atualizações
+UPDATES_TESTING,Test builds,Versões de teste
+UPDATES_STABLE,Final only,Só as finais
+UPDATES_OFF,Off,Desligadas
+UPDATE_CHECKING,Looking for updates...,A procurar atualizações...
+UPDATE_NONE,Up to date,Atualizado
+UPDATE_AVAILABLE,Version %s is out,Saiu a versão %s
+UPDATE_INSTALL,Update,Atualizar
+UPDATE_DOWNLOADING,Downloading... %s,A descarregar... %s
+UPDATE_INSTALLING,Installing...,A instalar...
+UPDATE_RESTARTING,Updated to %s - restarting...,Atualizado para %s - a reiniciar...
+UPDATE_FAILED,Update failed: %s,A atualização falhou: %s
+UPDATE_OPEN_PAGE,Open the page,Abrir a página
+UPDATE_ERROR_NETWORK,no connection,sem ligação
+UPDATE_ERROR_CHECKSUM,the download is damaged,o ficheiro veio danificado
+UPDATE_ERROR_FOLDER,the game's folder cannot be changed,a pasta do jogo não pode ser alterada
+UPDATE_ERROR_INSTALL,the files could not be replaced,não foi possível substituir os ficheiros
 TAB_COSMOS,Cosmos,Cosmos
 TAB_TERRAIN,Terrain,Terreno
 TAB_WEATHER,Weather and nature,Clima e natureza

@@ -9,9 +9,13 @@ func _ready() -> void:
 	InputBindings.apply()
 	settings.read()
 	settings.apply()
+	if Updater.supported():
+		UpdateInstaller.clean_up(Updater.install_dir())
 	if GravitySelfTest.requested():
 		var passed: bool = GravitySelfTest.run()
 		get_tree().quit.call_deferred(0 if passed else 1)
+	elif UpdateSelfTest.requested():
+		get_tree().quit.call_deferred(0 if UpdateSelfTest.run() else 1)
 
 
 func _unhandled_input(event: InputEvent) -> void:

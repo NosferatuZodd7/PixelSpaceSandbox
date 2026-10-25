@@ -1,6 +1,8 @@
 extends Node
-## Title screen: the seeded sky, the game's name and the main menu
-## (new system, settings, quit). Works with the mouse or the keyboard.
+## Title screen: the seeded sky, the game's name, the main menu (new
+## system, settings, quit) and, in an exported game, whether a newer build
+## is out (it installs itself on request). Works with the mouse or the
+## keyboard.
 
 const SPACE_SCENE: String = "res://scenes/space.tscn"
 
@@ -14,6 +16,7 @@ var settings: GameSettings
 @onready var _quit_button: Button = $UI/Root/Center/Menu/Quit
 @onready var _settings_panel: SettingsPanel = $UI/Root/Center/SettingsPanel
 @onready var _version_label: Label = $UI/Root/VersionLabel
+@onready var _update_notice: UpdateNotice = $UI/Root/UpdateNotice
 
 
 func _ready() -> void:
@@ -30,6 +33,8 @@ func _ready() -> void:
 	_quit_button.pressed.connect(func() -> void: get_tree().quit())
 	_settings_panel.closed.connect(_on_settings_closed)
 	_new_system_button.grab_focus()
+	_update_notice.updater.channel = settings.update_channel
+	_update_notice.updater.check()
 
 
 ## Milestone 1 opens the Solar System at today's date; milestone 3 adds the
@@ -50,3 +55,7 @@ func is_settings_open() -> bool:
 func _on_settings_closed() -> void:
 	_menu.show()
 	_settings_button.grab_focus()
+	# The player may have chosen another update channel.
+	if _update_notice.updater.channel != settings.update_channel:
+		_update_notice.updater.channel = settings.update_channel
+		_update_notice.updater.check()

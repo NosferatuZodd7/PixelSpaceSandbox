@@ -14,6 +14,8 @@ const SECTION: String = "settings"
 var locale: String = ""
 var fullscreen: bool = false
 var vsync: bool = true
+## Which published builds the game updates itself to.
+var update_channel: UpdateChecker.Channel = UpdateChecker.default_channel(GameVersion.current())
 
 var _path: String
 
@@ -59,6 +61,9 @@ func read() -> void:
 	var saved_vsync: Variant = file.get_value(SECTION, "vsync", vsync)
 	if saved_vsync is bool:
 		vsync = saved_vsync
+	var saved_channel: Variant = file.get_value(SECTION, "update_channel", -1)
+	if saved_channel is int and UpdateChecker.Channel.values().has(saved_channel):
+		update_channel = saved_channel
 
 
 func write() -> Error:
@@ -66,6 +71,7 @@ func write() -> Error:
 	file.set_value(SECTION, "locale", locale)
 	file.set_value(SECTION, "fullscreen", fullscreen)
 	file.set_value(SECTION, "vsync", vsync)
+	file.set_value(SECTION, "update_channel", update_channel)
 	return file.save(_path)
 
 

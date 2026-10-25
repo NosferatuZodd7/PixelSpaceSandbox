@@ -63,7 +63,7 @@ func test_settings_open_and_close_with_escape() -> void:
 	var panel: SettingsPanel = _main.get_node("UI/Root/Center/SettingsPanel")
 	assert_true(panel.visible, "settings shown")
 	assert_false((_main.get_node("UI/Root/Center/Menu") as Control).visible, "menu hidden")
-	assert_eq(panel.rows().size(), 3, "language, display, vsync")
+	assert_eq(panel.rows().size(), 4, "language, display, vsync, updates")
 	assert_true(panel.rows()[0].has_focus(), "first row focused")
 
 	_press(&"ui_cancel")
@@ -122,3 +122,36 @@ func _press(action: StringName) -> void:
 func _remove_settings_file() -> void:
 	if FileAccess.file_exists(SETTINGS_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS_PATH))
+
+
+func test_no_update_check_when_not_an_exported_game() -> void:
+	var notice: UpdateNotice = _main.get_node("UI/Root/UpdateNotice")
+	assert_false(notice.visible, "running from the editor or the tests, the game does not update itself")
+	assert_eq(notice.updater.state, Updater.State.DISABLED)
+
+
+func test_a_newer_build_is_offered_on_the_title_screen() -> void:
+	var notice: UpdateNotice = _main.get_node("UI/Root/UpdateNotice")
+	var updater: Updater = notice.updater
+	updater.channel = UpdateChecker.Channel.TESTING
+	updater.current_version = "0.2.0-dev.1"
+	var reply: String = JSON.stringify([{
+		"tag_name": "v0.2.0-dev.7", "draft": false, "prerelease": true, "body": "", "html_url": "https://example.org/r",
+		"assets": [
+			{"name": "PixelSpaceSandbox-v0.2.0-dev.7%s" % UpdateChecker.asset_suffix(), "size": 10, "browser_download_url": "https://example.org/a.zip"},
+			{"name": "PixelSpaceSandbox-v0.2.0-dev.7%s.sha256" % UpdateChecker.asset_suffix(), "size": 10, "browser_download_url": "https://example.org/a.zip.sha256"},
+		],
+	}])
+	updater.handle_releases(HTTPRequest.RESULT_SUCCESS, 200, reply)
+	await wait_frames(1)
+	assert_eq(updater.state, Updater.State.AVAILABLE)
+	assert_true(notice.visible, "the notice shows")
+	assert_true(notice.text().contains("0.2.0-dev.7"), "naming the new version: %s" % notice.text())
+	assert_true(notice.action_button().visible, "with a button to update")
+	updater.handle_releases(HTTPRequest.RESULT_CANT_CONNECT, 0, "")
+	await wait_frames(1)
+	assert_eq(updater.state, Updater.State.FAILED, "no connection")
+	assert_true(notice.text().contains("no connection"), "is said plainly: %s" % notice.text())
+	updater.handle_releases(HTTPRequest.RESULT_SUCCESS, 200, "[]")
+	await wait_frames(1)
+	assert_eq(updater.state, Updater.State.UP_TO_DATE)

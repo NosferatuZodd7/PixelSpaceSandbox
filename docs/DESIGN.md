@@ -408,6 +408,33 @@ too). `tools/run_tests.sh` and `.ps1` list the extensions in
 `.godot/extension_list.cfg` before that first import, so Godot loads them
 at startup as on every later run.
 
+## Updates
+
+As in OrbisLink: CI publishes every push to `beta` as a test build
+(pre-release `vX.Y.Z-dev.N`, with N the run number, X.Y.Z from
+`project.godot`, written into the exported game) and a pushed `vX.Y.Z` tag
+as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
+`-linux.zip` and their `.sha256`. In the game:
+
+- `GameVersion` compares versions as semver (a test build comes before the
+  version it leads to; build numbers compare as numbers).
+- `UpdateChecker` reads GitHub's release list (no credentials; the
+  repository is the `pixel_space_sandbox/updates/repository` setting),
+  keeps the releases with this system's zip, and picks the newest one newer
+  than the running game on the player's channel (test builds, final only,
+  off).
+- `Updater` (a node on the title screen, only in an exported game) looks
+  when the title screen opens; on request it downloads the zip next to the
+  game, checks its SHA-256 against the published one (no checksum, no
+  install), and hands it to `UpdateInstaller`, then starts the new version.
+- `UpdateInstaller` unpacks into `.update/` first (a broken download changes
+  nothing), then moves each running file aside as `<name>.old` (Windows can
+  rename a running program and its loaded library, not overwrite them) and
+  the new one in. The next start deletes the `.old` files.
+- `UpdateSelfTest` (`-- --update-self-test=<zip>`) installs a zip over the
+  running game; the Windows CI job uses it on a copy of the build and then
+  starts the result.
+
 ## Testing
 
 - `tools/run_tests.sh` (or `tools/run_tests.ps1` on Windows) imports the
@@ -458,3 +485,4 @@ at startup as on every later run.
 | 17 | A click places a body on a circular orbit, a drag throws it; previews and shown orbits are two-body conics around what the body circles | 2026-10 |
 | 18 | The habitable zone is drawn from the summed light of every star, not as one ring per star | 2026-10 |
 | 19 | Collisions merge bodies; a pass inside the Roche limit (rigid-body factor 2) tears the lighter body into a ring; both found by the kernels at every step | 2026-10 |
+| 20 | The game updates itself from GitHub releases: every push to `beta` is a test build; channels test/final/off; SHA-256 checked; files swapped by renaming (owner's request, as in OrbisLink) | 2026-10 |

@@ -2,19 +2,34 @@
 # and Windows, tests the project and builds the Windows and Linux executables
 # with the official Godot release and export templates (the Windows build
 # ships the ANGLE fallback). The Windows build is then started on a real
-# Windows machine to check it runs and that its native kernel loads and
-# agrees with the GDScript one. Download the builds from the run's
-# "Artifacts".
+# Windows machine to check it runs, that its native kernel loads and agrees
+# with the GDScript one, and that it can update itself while running.
+#
+# Publishing (as in OrbisLink), so the game updates itself:
+# * every push to the beta branch becomes a test build, a pre-release
+#   vX.Y.Z-dev.N (X.Y.Z from project.godot, N this run's number, always
+#   going up); the game sees it on the "Test builds" update channel. Only
+#   the five newest test builds are kept.
+# * a pushed vX.Y.Z tag (equal to project.godot's version) becomes a final
+#   release, seen on both channels.
+# Each release carries a zip per system and its SHA-256, which the game
+# checks before installing. Builds are also in each run's "Artifacts".
 name: Build
 
 on:
   push:
     branches: [main, beta]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# Two pushes in a row on a branch: only the second one's build matters.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
 
 env:
   GODOT_VERSION: 4.7.2
@@ -25,8 +40,45 @@ jobs:
   test-and-export:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+      testing: ${{ steps.version.outputs.testing }}
     steps:
       - uses: actions/checkout@v4
+
+      # The version is written into project.godot before exporting, so the
+      # game knows which build it is when it looks for updates.
+      - name: Decide the version
+        id: version
+        run: |
+          base=$(sed -n 's/^config\/version="\([0-9.]*\)"/\1/p' project.godot)
+          if [ -z "$base" ]; then
+            echo "::error::Could not read config/version from project.godot."
+            exit 1
+          fi
+          publish=false
+          testing=true
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            if [ "${GITHUB_REF_NAME#v}" != "$base" ]; then
+              echo "::error::The tag says ${GITHUB_REF_NAME#v} and project.godot says $base."
+              exit 1
+            fi
+            version="v$base"
+            publish=true
+            testing=false
+          else
+            version="v$base-dev.$GITHUB_RUN_NUMBER"
+            if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "beta" ]; then
+              publish=true
+            fi
+          fi
+          sed -i "s/^config\/version=.*/config\/version=\"${version#v}\"/" project.godot
+          grep '^config/version' project.godot
+          echo "Version $version (publish: $publish, test build: $testing)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "testing=$testing" >> "$GITHUB_OUTPUT"
 
       - name: Build the native gravity kernel for Linux and Windows
         run: |
@@ -71,6 +123,20 @@ jobs:
           test -f build/linux/PixelSpaceSandbox.x86_64
           test -f build/linux/libpixelspace.linux.x86_64.so
 
+      # What the game downloads to update itself: the files at the root of
+      # a zip, and the zip's SHA-256 next to it.
+      - name: Pack the release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p release
+          (cd build/windows && zip -q -r "../../release/PixelSpaceSandbox-$VERSION-windows.zip" .)
+          (cd build/linux && zip -q -r "../../release/PixelSpaceSandbox-$VERSION-linux.zip" .)
+          cd release
+          for file in *.zip; do sha256sum "$file" > "$file.sha256"; done
+          ls -l
+          cat *.sha256
+
       - uses: actions/upload-artifact@v4
         with:
           name: PixelSpaceSandbox-windows
@@ -81,6 +147,12 @@ jobs:
         with:
           name: PixelSpaceSandbox-linux
           path: build/linux/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release/
           if-no-files-found: error
 
   run-on-windows:
@@ -135,6 +207,38 @@ jobs:
           if ($game.ExitCode -ne 0) { throw "The gravity self-test failed (exit code $($game.ExitCode))." }
           if (-not (Select-String -Path $log -Pattern "kernels agree: true" -Quiet)) { throw "The native kernel did not agree with the GDScript one." }
 
+      # Updating replaces the running game and its loaded native library,
+      # which Windows only allows by renaming them: install this very build
+      # over a copy of itself while it runs, then start the result.
+      - name: Check the game can update itself on Windows
+        shell: pwsh
+        run: |
+          $copy = Join-Path $env:RUNNER_TEMP "installed"
+          New-Item -ItemType Directory -Force -Path $copy | Out-Null
+          Copy-Item -Path .\PixelSpaceSandbox.exe, .\libpixelspace.windows.x86_64.dll -Destination $copy
+          $zip = Join-Path $env:RUNNER_TEMP "update.zip"
+          Compress-Archive -Path .\PixelSpaceSandbox.exe, .\libpixelspace.windows.x86_64.dll -DestinationPath $zip
+          $log = Join-Path $PWD "update-test.log"
+          $game = Start-Process -FilePath (Join-Path $copy "PixelSpaceSandbox.exe") -ArgumentList "--headless", "--log-file", $log, "--", "--update-self-test=$zip" -PassThru
+          $null = $game.Handle
+          if (-not $game.WaitForExit(120000)) {
+            Stop-Process -Id $game.Id -Force
+            throw "The update self-test did not finish within 2 minutes."
+          }
+          Get-Content $log
+          if ($game.ExitCode -ne 0) { throw "The game could not update itself (exit code $($game.ExitCode))." }
+          if (-not (Test-Path (Join-Path $copy "PixelSpaceSandbox.exe.old"))) { throw "The running game was not moved aside." }
+          $log2 = Join-Path $PWD "after-update.log"
+          $again = Start-Process -FilePath (Join-Path $copy "PixelSpaceSandbox.exe") -ArgumentList "--headless", "--quit-after", "60", "--log-file", $log2 -PassThru
+          $null = $again.Handle
+          if (-not $again.WaitForExit(120000)) {
+            Stop-Process -Id $again.Id -Force
+            throw "The updated game did not quit."
+          }
+          Get-Content $log2
+          if ($again.ExitCode -ne 0) { throw "The updated game failed to start (exit code $($again.ExitCode))." }
+          if (Test-Path (Join-Path $copy "PixelSpaceSandbox.exe.old")) { throw "The old files were not cleared on the next start." }
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -142,5 +246,61 @@ jobs:
           path: |
             run.log
             self-test.log
+            update-test.log
+            after-update.log
             windows-screenshot.png
           if-no-files-found: ignore
+
+  publish:
+    needs: [test-and-export, run-on-windows]
+    if: needs.test-and-export.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Publishing a release writes to the repository.
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.test-and-export.outputs.version }}
+      TESTING: ${{ needs.test-and-export.outputs.testing }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: PixelSpaceSandbox ${{ env.VERSION }}${{ env.TESTING == 'true' && ' (test build)' || '' }}
+          prerelease: ${{ env.TESTING == 'true' }}
+          make_latest: ${{ env.TESTING == 'true' && 'false' || 'true' }}
+          files: |
+            release/*.zip
+            release/*.sha256
+          body: |
+            Built automatically from commit `${{ github.sha }}`.
+
+            The game updates itself to this build from the title screen
+            (Settings → Updates: "Test builds" for test builds). To install
+            by hand: unzip the file for your system into a folder and run
+            PixelSpaceSandbox.
+
+      # Only the newest test builds matter; the releases page would
+      # otherwise fill up with one per push. Final releases are never deleted.
+      - name: Delete old test builds
+        if: env.TESTING == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list -R "$GITHUB_REPOSITORY" --limit 200 \
+              --json tagName,isPrerelease \
+              --jq '.[] | select(.isPrerelease) | .tagName' \
+            | grep -E -- '-dev\.[0-9]+$' \
+            | sort -t. -k4,4nr \
+            | tail -n +6 \
+            | while read -r tag; do
+                echo "Deleting $tag"
+                gh release delete "$tag" -R "$GITHUB_REPOSITORY" --cleanup-tag --yes
+              done

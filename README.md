@@ -42,17 +42,31 @@ per second. In the game:
 | Tab | Hide or show the interface |
 | Esc | Pause menu |
 
-## Test builds
+## Test builds and updates
 
 Every push to `beta` or `main` builds the Windows and Linux executables on
 GitHub Actions with the official Godot export templates, after running all
-the checks, and starts the Windows build on a real Windows machine.
+the checks, and starts the Windows build on a real Windows machine (it also
+checks there that the game can update itself while running).
 
-To download them: open the repository's **Actions** tab, pick the latest
-**Build** run, and download **PixelSpaceSandbox-windows** or
-**PixelSpaceSandbox-linux** from its **Artifacts**. On Windows, the first
-launch shows "Windows protected your PC" because the game is not signed:
-choose **More info → Run anyway**.
+Every push to `beta` is then published as a **test build** on the
+repository's **Releases** page (a pre-release `vX.Y.Z-dev.N`, with a zip per
+system and its SHA-256); only the five newest are kept. A pushed `vX.Y.Z`
+tag becomes a final release.
+
+**The game updates itself.** On the title screen it looks for a newer build
+on its update channel and offers it ("Version … is out — Update"): one click
+downloads it, checks its SHA-256, puts the new files in place and restarts
+the game. Choose the channel in **Settings → Updates**: *Test builds* (every
+push to `beta`; the default for a test build), *Final only*, or *Off*. The
+game's folder must be writable (any folder of your own is; `Program Files`
+is not) — otherwise the notice offers the release page instead.
+
+The first time, download the zip for your system from the latest release
+(or from a **Build** run's **Artifacts** in the **Actions** tab), unzip it
+into a folder and run `PixelSpaceSandbox`. On Windows, the first launch shows
+"Windows protected your PC" because the game is not signed: choose
+**More info → Run anyway**.
 
 ## Running the tests
 

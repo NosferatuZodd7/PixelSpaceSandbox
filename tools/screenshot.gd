@@ -8,6 +8,8 @@ extends SceneTree
 ##   [--time=2026-10-13T12:00:00] [--select=earth] [--follow=earth] [--zoom=pixels per AU]
 ##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
 ##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y]
+## For the title screen: [--update=available] shows the update notice as
+## when a newer build is out.
 ## --power chooses a god power; --click uses it at a screen pixel (with
 ## --drag, dragging from there to the --drag pixel); then the scene runs
 ## for --wait frames; --hover finally points the mouse at a pixel to show
@@ -45,6 +47,14 @@ func _capture() -> void:
 	var view: SpaceView = scene.get_node_or_null("View") as SpaceView
 	if view != null:
 		_set_up_view(scene, view, args)
+	var notice: UpdateNotice = scene.get_node_or_null("UI/Root/UpdateNotice") as UpdateNotice
+	if notice != null and args.get("update", "") == "available":
+		var reply: String = JSON.stringify([{
+			"tag_name": "v9.9.9-dev.1", "draft": false, "prerelease": true, "html_url": "",
+			"assets": [{"name": "x" + UpdateChecker.asset_suffix(), "size": 1, "browser_download_url": ""}],
+		}])
+		notice.updater.channel = UpdateChecker.Channel.TESTING
+		notice.updater.handle_releases(HTTPRequest.RESULT_SUCCESS, 200, reply)
 
 	# Let the sky finish on its worker thread, then let a few frames render.
 	var deadline: int = Time.get_ticks_msec() + 20000
