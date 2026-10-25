@@ -18,3 +18,9 @@ Thumbs.db
 *.tmp
 .vscode/
 .idea/
+
+# Native kernel build output
+/native/bin/
+*.os
+*.o
+.sconsign*.dblite

@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+# Builds the native gravity kernel, a GDExtension, with godot-cpp (branch 4.5,
+# which also runs on later Godot 4 versions). From this folder:
+#
+#   scons platform=linux target=template_release godot_cpp=/path/to/godot-cpp
+#   scons platform=windows target=template_release godot_cpp=/path/to/godot-cpp
+#
+# One optimised library per platform serves the editor and both export kinds.
+import os
+
+godot_cpp = ARGUMENTS.get("godot_cpp", os.environ.get("GODOT_CPP", "godot-cpp"))
+ARGUMENTS.setdefault("build_profile", os.path.abspath("build_profile.json"))
+env = SConscript(os.path.join(godot_cpp, "SConstruct"))
+
+env.Append(CPPPATH=["src/"])
+sources = Glob("src/*.cpp")
+name = "bin/libpixelspace.{}.{}{}".format(env["platform"], env["arch"], env["SHLIBSUFFIX"])
+library = env.SharedLibrary(name, source=sources)
+Default(library)

@@ -1,0 +1,10 @@
+[configuration]
+
+entry_symbol = "pixelspace_library_init"
+compatibility_minimum = "4.5"
+reloadable = false
+
+[libraries]
+
+linux.x86_64 = "res://native/bin/libpixelspace.linux.x86_64.so"
+windows.x86_64 = "res://native/bin/libpixelspace.windows.x86_64.dll"
