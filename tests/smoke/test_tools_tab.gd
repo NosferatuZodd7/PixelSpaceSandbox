@@ -147,3 +147,34 @@ func test_lagrange_points_of_the_selected_body() -> void:
 	_view.select(_index(&"jupiter"))
 	await wait_frames(2)
 	assert_eq(_overlays.drawn(&"lagrange"), 5, "Jupiter's five points")
+
+
+func test_the_world_laws_panel_changes_the_rules() -> void:
+	await _open_tools()
+	await _press("world_laws")
+	var panel: WorldLawsPanel = _screen.get_node("UI/Root/Center/WorldLawsPanel")
+	assert_true(panel.visible, "the World laws button opens the panel")
+	var rows: Array[SettingRow] = panel.rows()
+	assert_eq(rows.size(), 3, "speed of light, collisions, gravity")
+	assert_eq(tr(rows[0].value_text()), "Real", "light at its real speed")
+	rows[0].step(-1)
+	assert_eq(_simulation().light_speed, INF, "one step back: instant")
+	assert_true(panel.note_text().is_empty(), "instant needs no warning")
+	rows[0].step(-1)
+	assert_almost_eq(_simulation().light_speed, Units.C / 1000.0, 1e-9, "then a thousand times slower")
+	assert_true(panel.note_text().to_lower().contains("fiction"), "clearly marked as fiction: %s" % panel.note_text())
+	rows[1].step(1)
+	assert_false(_simulation().state.collisions_enabled, "collisions off")
+	rows[2].step(1)
+	assert_eq(_simulation().state.g_scale, 2.0, "gravity twice as strong")
+	_press_action(&"ui_cancel")
+	await wait_frames(1)
+	assert_false(panel.visible, "Esc closes it")
+	assert_false(_screen.call(&"is_menu_open"), "without opening the pause menu")
+
+
+func _press_action(action: StringName) -> void:
+	var event: InputEventAction = InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	tree.root.push_input(event)

@@ -167,6 +167,22 @@ TOOL_LAWS,World laws,Leis do mundo
 TOOL_LAWS_HINT,The rules of this universe,As regras deste universo
 FRONT_PULSE,Light from %s,Luz de %s
 RULER_LIGHT,light: %s,luz: %s
+LAWS_TITLE,WORLD LAWS,LEIS DO MUNDO
+LAW_LIGHT,Speed of light,Velocidade da luz
+LAW_LIGHT_REAL,Real,Real
+LAW_LIGHT_10,10x slower,10x mais lenta
+LAW_LIGHT_1000,1000x slower,1000x mais lenta
+LAW_LIGHT_INSTANT,Instant,Instantânea
+LAW_LIGHT_FICTION,"Fiction: what if light were %s times slower? Changes take that much longer to be felt.","Ficção: e se a luz fosse %s vezes mais lenta? As mudanças demoram outro tanto a ser sentidas."
+LAW_COLLISIONS,Collisions,Colisões
+LAW_ON,On,Ligadas
+LAW_OFF,Off,Desligadas
+LAW_GRAVITY,Gravity,Gravidade
+NOTE_MERGE,%s and %s collided,%s e %s colidiram
+NOTE_TORN,%s was torn into a ring around %s,%s foi desfeito num anel à volta de %s
+NOTE_IMPACT_NAMED,%s struck %s,%s atingiu %s
+NOTE_IMPACT_COMET,A comet struck %s,Um cometa atingiu %s
+NOTE_IMPACT,A small body struck %s,Um pequeno corpo atingiu %s
 TAB_COSMOS,Cosmos,Cosmos
 TAB_TERRAIN,Terrain,Terreno
 TAB_WEATHER,Weather and nature,Clima e natureza

@@ -218,3 +218,24 @@ func test_a_star_too_close_to_a_black_hole_is_torn_apart() -> void:
 		simulation.advance(1.0 / 60.0)
 	assert_false(simulation.is_present(0), "the Sun is torn apart")
 	assert_eq(simulation.system.body(hole).rings.size(), 1, "into a ring around the black hole")
+
+
+func test_a_small_body_striking_a_planet_is_reported() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.leave_pristine()
+	var earth: int = simulation.system.index_of(&"earth")
+	var b: int = earth * 3
+	var speed: float = Units.au_from_km(20.0) * Units.YEAR_SECONDS
+	var state: NBodyState = simulation.state
+	var rock: int = state.add_particle(
+		state.view_pos[b] + 0.002, state.view_pos[b + 1], state.view_pos[b + 2],
+		state.view_vel[b] - speed, state.view_vel[b + 1], state.view_vel[b + 2], 1e-9, Gravity.ParticleKind.ASTEROID
+	)
+	simulation.clock.use_preset("4")
+	for frame: int in 60:
+		simulation.advance(1.0 / 60.0)
+	var impacts: Array[Dictionary] = simulation.events.filter(func(event: Dictionary) -> bool: return event["kind"] == "impact")
+	assert_eq(impacts.size(), 1, "one impact")
+	if impacts.size() == 1:
+		assert_eq(impacts[0]["body"], earth, "on the Earth")
+		assert_eq(impacts[0]["particle"], rock, "by the asteroid")

@@ -277,3 +277,19 @@ func test_smart_time_follows_the_wave() -> void:
 	await wait_frames(1)
 	assert_false(_screen.get(&"smart_time"), "choosing a speed takes over again")
 	assert_false(simulation.clock.is_steered())
+
+
+func test_collisions_are_announced_and_can_be_followed() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = _index(&"earth")
+	var mars: int = _index(&"mars")
+	simulation.merge(earth, mars, "FRONT_MERGED")
+	await wait_frames(2)
+	var feed: NotificationFeed = _screen.get_node("UI/Root/Notifications")
+	assert_eq(feed.texts().size(), 1, "one notification")
+	assert_true(feed.texts().size() == 1 and feed.texts()[0] == "Earth and Mars collided", "saying what happened: %s" % [feed.texts()])
+	assert_true(simulation.events.is_empty(), "the screen took the event")
+	_click(feed.entry(0).get_global_rect().get_center())
+	await wait_frames(2)
+	assert_eq(_view.followed, earth, "clicking it follows the Earth")
+	assert_eq(_view.selected, earth)

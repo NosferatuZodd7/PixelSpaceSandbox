@@ -291,3 +291,27 @@ func test_a_point_on_screen_lies_in_the_plane_of_what_it_would_circle() -> void:
 	assert_eq(simulation.dominant_body(point[0], point[1], point[2]), earth)
 	point = simulation.point_in_plane(3.0, 0.0)
 	assert_eq(point[2], system.z(0), "in the asteroid belt, at the Sun's height")
+
+
+func test_world_laws_change_the_rules() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.set_light_slowdown(1000.0)
+	assert_almost_eq(simulation.light_speed, Units.C / 1000.0, 1e-9, "light a thousand times slower (fiction)")
+	simulation.set_light_slowdown(INF)
+	assert_eq(simulation.light_speed, INF, "or instant, the classic sandbox")
+	simulation.set_light_slowdown(1.0)
+	assert_eq(simulation.light_speed, Units.C, "or real")
+	simulation.set_collisions(false)
+	assert_false(simulation.state.collisions_enabled, "collisions off")
+	assert_true(simulation.is_pristine(), "rules alone do not disturb the untouched system")
+	simulation.set_gravity_scale(2.0)
+	assert_eq(simulation.state.g_scale, 2.0, "gravity twice as strong")
+	assert_false(simulation.is_pristine(), "which changes every orbit, so the system runs on gravity from now on")
+	var earth: int = simulation.system.index_of(&"earth")
+	var before: PackedFloat64Array = _position(simulation, &"earth")
+	simulation.clock.use_preset("6")
+	for frame: int in 60:
+		simulation.advance(1.0 / 60.0)
+	var r: float = Vector3(simulation.system.x(earth), simulation.system.y(earth), simulation.system.z(earth)).length()
+	assert_true(r < 0.99, "the Earth falls inwards under the stronger pull (%s AU)" % r)
+	assert_true(before.size() == 3)

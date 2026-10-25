@@ -10,6 +10,8 @@
 [ext_resource type="Script" path="res://src/ui/time_controls.gd" id="8_time_controls"]
 [ext_resource type="Script" path="res://src/view/power_tool.gd" id="9_powers"]
 [ext_resource type="Script" path="res://src/view/overlay_view.gd" id="10_overlays"]
+[ext_resource type="Script" path="res://src/ui/world_laws_panel.gd" id="11_laws"]
+[ext_resource type="Script" path="res://src/ui/notification_feed.gd" id="12_notes"]
 
 [node name="Space" type="Node"]
 script = ExtResource("1_space")
@@ -68,6 +70,15 @@ offset_bottom = 18.0
 theme_type_variation = &"KeyLabel"
 auto_translate_mode = 2
 
+[node name="Notifications" type="VBoxContainer" parent="UI/Root"]
+layout_mode = 1
+offset_left = 6.0
+offset_top = 20.0
+offset_right = 220.0
+offset_bottom = 90.0
+mouse_filter = 2
+script = ExtResource("12_notes")
+
 [node name="Windows" type="Control" parent="UI/Root"]
 layout_mode = 1
 anchors_preset = 15
@@ -107,3 +118,8 @@ script = ExtResource("6_pause")
 
 [node name="SettingsPanel" parent="UI/Root/Center" instance=ExtResource("7_settings")]
 layout_mode = 2
+
+[node name="WorldLawsPanel" type="PanelContainer" parent="UI/Root/Center"]
+visible = false
+layout_mode = 2
+script = ExtResource("11_laws")

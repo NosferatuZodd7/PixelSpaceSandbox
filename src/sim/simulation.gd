@@ -28,8 +28,10 @@ var max_usec_per_frame: int = 6000
 ## True when the last frame ran out of budget (the game runs slower than
 ## the chosen speed).
 var lagging: bool = false
-## What happened as time ran, oldest first, for notifications: for now
-## {"kind": "merge", "body": survivor, "other": absorbed, "time": years}.
+## What happened as time ran, oldest first, for notifications:
+## {"kind": "merge", "body": survivor, "other": absorbed, "time": years},
+## {"kind": "disrupt", "body": the heavier, "other": the one torn apart},
+## {"kind": "impact", "body": what was struck, "particle": what struck it}.
 ## Whoever reads them may clear the list.
 var events: Array[Dictionary] = []
 ## Counts the changes made to the system (places, removals, flings), so
@@ -127,6 +129,32 @@ func advance(real_seconds: float) -> void:
 		_core.call(&"preview", state, clock.time)
 		_show_view()
 	_update_fronts()
+
+
+## World law: light this many times slower than in reality (1: real, INF:
+## instant, the classic sandbox; anything else is fiction). Only news sent
+## from now on travels at the new speed.
+func set_light_slowdown(factor: float) -> void:
+	light_speed = INF if is_inf(factor) else Units.C / factor
+
+
+## World law: whether bodies that touch merge (and come apart inside Roche
+## limits) or pass through each other.
+func set_collisions(on: bool) -> void:
+	state.collisions_enabled = on
+
+
+## World law: gravity this many times as strong as in reality. Every orbit
+## changes at once, so the system runs on gravity from then on.
+func set_gravity_scale(scale: float) -> void:
+	if scale == state.g_scale:
+		return
+	leave_pristine()
+	state.g_scale = scale
+	if alternative != null:
+		alternative.g_scale = scale
+		alternative.acc_valid = false
+	_after_change(-1)
 
 
 ## The particle of a named small body (a comet), or -1.
@@ -672,6 +700,9 @@ func _run_to(target: float, max_steps: int, max_usec: int) -> bool:
 		var status: int = int(result["status"])
 		steps_left -= int(result["steps"])
 		if status == Gravity.Status.EVENTS:
+			var impacts: PackedInt32Array = result["impacts"]
+			for k: int in range(0, impacts.size(), 2):
+				events.append({"kind": "impact", "body": impacts[k + 1], "particle": impacts[k], "time": state.time})
 			var pairs: PackedInt32Array = result["collisions"]
 			var gaps: PackedFloat64Array = result["collision_gaps"]
 			for k: int in range(0, pairs.size(), 2):

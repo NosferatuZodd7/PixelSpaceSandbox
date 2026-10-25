@@ -36,6 +36,8 @@ var _was_paused: bool = false
 @onready var _toolbar: Toolbar = $UI/Root/Toolbar
 @onready var _pause_menu: PauseMenu = $UI/Root/Center/PauseMenu
 @onready var _settings_panel: SettingsPanel = $UI/Root/Center/SettingsPanel
+@onready var _laws_panel: WorldLawsPanel = $UI/Root/Center/WorldLawsPanel
+@onready var _notifications: NotificationFeed = $UI/Root/Notifications
 
 
 func _ready() -> void:
@@ -57,6 +59,10 @@ func _ready() -> void:
 	for overlay: StringName in _toolbar.overlays:
 		set_overlay(overlay, _toolbar.overlays[overlay])
 	_toolbar.overlay_toggled.connect(set_overlay)
+	_toolbar.laws_requested.connect(func() -> void: _laws_panel.open(simulation))
+	_notifications.focus_requested.connect(func(body: int) -> void:
+		_view.select(body)
+		_view.follow(body))
 	_toolbar.power_changed.connect(_powers.set_power)
 	_powers.cancelled.connect(_toolbar.cancel_power)
 	_counter.clock = simulation.clock
@@ -77,7 +83,34 @@ func _process(delta: float) -> void:
 		_steer_time(delta)
 		simulation.advance(delta)
 	_time_controls.news_travelling = not simulation.fronts.is_empty()
+	_announce_events()
 	_update_status()
+
+
+## Turns what happened in the simulation into notices.
+func _announce_events() -> void:
+	var system: StarSystem = simulation.system
+	for event: Dictionary in simulation.events:
+		var body: int = event["body"]
+		var who: String = Format.body_name(system.body(body))
+		match str(event["kind"]):
+			"merge":
+				_notifications.push(tr("NOTE_MERGE") % [who, Format.body_name(system.body(event["other"]))], body)
+			"disrupt":
+				_notifications.push(tr("NOTE_TORN") % [Format.body_name(system.body(event["other"])), who], body)
+			"impact":
+				var particle: int = event["particle"]
+				var named: String = ""
+				for key: String in simulation.particle_names:
+					if simulation.particle_names[key] == particle:
+						named = tr(key)
+				if not named.is_empty():
+					_notifications.push(tr("NOTE_IMPACT_NAMED") % [named, who], body)
+				elif simulation.state.p_kind[particle] == Gravity.ParticleKind.COMET:
+					_notifications.push(Format.tr_units("NOTE_IMPACT_COMET", who), body)
+				else:
+					_notifications.push(Format.tr_units("NOTE_IMPACT", who), body)
+	simulation.events.clear()
 
 
 ## Shows or hides a layer of the view (from the Tools tab).
