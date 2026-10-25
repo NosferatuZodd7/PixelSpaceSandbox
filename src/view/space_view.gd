@@ -35,6 +35,10 @@ const PRIORITY: Dictionary[CelestialBody.Kind, int] = {
 	CelestialBody.Kind.STAR: 0, CelestialBody.Kind.BLACK_HOLE: 0, CelestialBody.Kind.PLANET: 1,
 	CelestialBody.Kind.DWARF_PLANET: 2, CelestialBody.Kind.MOON: 3,
 }
+## How long a collision's flash lasts (real seconds) and how far it spreads
+## beyond the body (pixels).
+const FLASH_SECONDS: float = 0.6
+const FLASH_PIXELS: float = 14.0
 ## Rings bigger than this (radius, pixels) are drawn only where they cross
 ## the screen.
 const FRONT_ARC_PIXELS: float = 3000.0
@@ -84,6 +88,9 @@ var _comet_heads: Dictionary[int, Vector2] = {}
 ## per body (empty when it circles nothing).
 var _elements: Array[PackedFloat64Array] = []
 var _changes_seen: int = -1
+## Flashes where something collided: {"body", "age"} (real seconds).
+var _flashes: Array[Dictionary] = []
+var _shake: float = 0.0
 var _restores_seen: int = 0
 var _orbits_drawn: int = 0
 var _hz: Node2D
@@ -195,6 +202,18 @@ func pick(point: Vector2) -> int:
 	return best
 
 
+## A flash at a body (a collision or an impact); a big one also shakes the
+## screen a little.
+func flash(body: int, big: bool) -> void:
+	_flashes.append({"body": body, "age": 0.0})
+	if big:
+		_shake = FLASH_SECONDS * 0.5
+
+
+func active_flashes() -> int:
+	return _flashes.size()
+
+
 ## How many orbits were drawn last frame.
 func orbits_drawn() -> int:
 	return _orbits_drawn
@@ -262,6 +281,12 @@ func _process(delta: float) -> void:
 	if followed != -1:
 		camera.look_at(system.x(followed), system.y(followed))
 	_layout(delta)
+	for item: Dictionary in _flashes:
+		item["age"] = float(item["age"]) + delta
+	_flashes = _flashes.filter(func(item: Dictionary) -> bool: return float(item["age"]) < FLASH_SECONDS)
+	# A little shake, whole pixels only.
+	_shake = maxf(0.0, _shake - delta)
+	position = Vector2(randi_range(-1, 1), randi_range(-1, 1)) if _shake > 0.0 else Vector2.ZERO
 	_hz.queue_redraw()
 	_orbits.queue_redraw()
 	_particles.queue_redraw()
@@ -551,6 +576,7 @@ func _draw_overlay() -> void:
 		Rect2(0.0, view.size.y - 44.0, view.size.x, 44.0),
 	]
 	_draw_ghosts()
+	_draw_flashes()
 	if selected != -1 and _shown[selected] == 1:
 		_draw_brackets(_screen[selected], _radii[selected] + 3, Palette.color(&"ui_accent"))
 	# Names never cover a drawn body (discs, rings or glows).
@@ -604,6 +630,25 @@ func _draw_overlay() -> void:
 		placed.append(box)
 		_overlay.draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_shadow"))
 		_overlay.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_text_dim"))
+
+
+## Each flash: a dithered burst of light growing from the body and fading.
+func _draw_flashes() -> void:
+	for item: Dictionary in _flashes:
+		var body: int = item["body"]
+		if body >= _screen.size():
+			continue
+		var t: float = float(item["age"]) / FLASH_SECONDS
+		var center: Vector2 = _screen[body]
+		var radius: float = _radii[body] + 2.0 + FLASH_PIXELS * t
+		var color: Color = Palette.color(&"white" if t < 0.3 else &"accretion" if t < 0.6 else &"star_k")
+		var count: int = maxi(12, ceili(radius * 2.0))
+		for k: int in count:
+			if (k + int(t * 10.0)) % 2 == 0:
+				var angle: float = TAU * k / count
+				_overlay.draw_rect(Rect2((center + Vector2(cos(angle), sin(angle)) * radius).floor(), Vector2.ONE), color)
+		if t < 0.25:
+			_overlay.draw_circle(center, _radii[body] + 1.0, Palette.color(&"white"))
 
 
 ## A removed or flung body still pulling where the news has not arrived: a

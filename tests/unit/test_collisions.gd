@@ -239,3 +239,21 @@ func test_a_small_body_striking_a_planet_is_reported() -> void:
 	if impacts.size() == 1:
 		assert_eq(impacts[0]["body"], earth, "on the Earth")
 		assert_eq(impacts[0]["particle"], rock, "by the asteroid")
+
+
+func test_a_collision_throws_up_debris() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var earth: int = simulation.system.index_of(&"earth")
+	var other: int = _impactor(simulation)
+	var particles: int = simulation.state.particle_count()
+	var mass: float = simulation.state.final_mass(earth) + simulation.state.final_mass(other)
+	simulation.merge(earth, other, "FRONT_MERGED")
+	var debris: int = simulation.state.particle_count() - particles
+	assert_true(debris >= 10, "a spray of debris (%d)" % debris)
+	var e: PackedFloat64Array = simulation.state.pos.slice(earth * 3, earth * 3 + 3)
+	for p: int in range(particles, simulation.state.particle_count()):
+		assert_eq(simulation.state.p_kind[p], Gravity.ParticleKind.DEBRIS)
+		var d: float = Vector3(simulation.state.p_pos[p * 3] - e[0], simulation.state.p_pos[p * 3 + 1] - e[1], simulation.state.p_pos[p * 3 + 2] - e[2]).length()
+		assert_true(d > simulation.state.radius[earth], "starting above the surface")
+	assert_almost_eq(simulation.state.final_mass(earth), mass, 1e-20, "debris carries no mass away: mass is kept")

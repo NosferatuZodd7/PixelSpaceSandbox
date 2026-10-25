@@ -392,7 +392,11 @@ pairs with how close they came (`collision_gaps`).
   heavier one (dust, ice when it was light, glowing gas for a star), whose
   mass and momentum the material joins without making it bigger.
 
-Each is reported in `Simulation.events` for notifications.
+Each is reported in `Simulation.events` for notifications. A merger also
+throws up 24 pieces of massless debris from just above the merged body's
+surface, at 0.4 to 1.15 times its escape speed (most fall back, as impacts
+that are not announced), and the view shows a dithered flash there and
+shakes by a pixel for a moment.
 
 ### Benchmark
 

@@ -15,6 +15,8 @@ const FRAME_SECONDS: float = 1.0 / 60.0
 ## (at one week per second, Phobos; at one year per second, every moon but
 ## ours and the farthest).
 const TARGET_STEPS: float = 60.0
+## Pieces of debris a collision throws up.
+const DEBRIS_COUNT: int = 24
 
 var system: StarSystem
 var clock: SimClock
@@ -309,8 +311,29 @@ func merge(first: int, second: int, label_key: String) -> int:
 		big = second
 		small = first
 	_absorb(big, small, label_key, big, true)
+	_throw_debris(big)
 	events.append({"kind": "merge", "body": big, "other": small, "time": state.time})
 	return big
+
+
+## A spray of massless debris from a collision: particles leaving the
+## merged body's surface in every direction, most too slowly to escape.
+func _throw_debris(body: int) -> void:
+	if system.body(body).kind == CelestialBody.Kind.BLACK_HOLE:
+		return
+	var random: RandomNumberGenerator = RandomNumberGenerator.new()
+	random.seed = hash([state.step_count, body, state.particle_count()])
+	var b: int = body * 3
+	var r: float = state.radius[body]
+	var escape: float = sqrt(2.0 * Units.G * state.g_scale * state.final_mass(body) / maxf(r, 1e-12))
+	for k: int in DEBRIS_COUNT:
+		var direction: Vector3 = Vector3(random.randfn(), random.randfn(), random.randfn() * 0.3).normalized()
+		var speed: float = escape * random.randf_range(0.4, 1.15)
+		state.add_particle(
+			state.pos[b] + direction.x * r * 1.5, state.pos[b + 1] + direction.y * r * 1.5, state.pos[b + 2] + direction.z * r * 1.5,
+			state.vel[b] + direction.x * speed, state.vel[b + 1] + direction.y * speed, state.vel[b + 2] + direction.z * speed,
+			0.0, Gravity.ParticleKind.DEBRIS
+		)
 
 
 ## One body takes another's mass and momentum at their centre of mass

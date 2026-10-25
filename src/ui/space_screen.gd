@@ -97,6 +97,9 @@ func _announce_events() -> void:
 	var system: StarSystem = simulation.system
 	for event: Dictionary in simulation.events:
 		var body: int = event["body"]
+		if event["kind"] == "impact" and simulation.state.p_kind[event["particle"]] == Gravity.ParticleKind.DEBRIS:
+			continue
+		_view.flash(body, event["kind"] != "impact")
 		var who: String = Format.body_name(system.body(body))
 		match str(event["kind"]):
 			"merge":

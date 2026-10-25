@@ -325,3 +325,15 @@ func test_undo_and_the_timeline_bar() -> void:
 	await wait_frames(2)
 	assert_almost_eq(simulation.clock.time, first, 1e-9, "clicking a mark goes back to it")
 	assert_true(simulation.clock.paused, "and waits there")
+
+
+func test_a_collision_flashes() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.merge(_index(&"earth"), _index(&"mars"), "FRONT_MERGED")
+	await wait_frames(2)
+	assert_true(_view.active_flashes() > 0, "a flash where they met")
+	simulation.clock.use_preset("4")
+	simulation.clock.paused = false
+	await wait_frames(30)
+	var feed: NotificationFeed = _screen.get_node("UI/Root/Notifications")
+	assert_eq(feed.texts().size(), 1, "falling debris is not announced: %s" % [feed.texts()])
