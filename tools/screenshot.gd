@@ -7,6 +7,7 @@ extends SceneTree
 ## For the game scene (--scene=res://scenes/space.tscn) also:
 ##   [--time=2026-10-13T12:00:00] [--select=earth] [--follow=earth] [--zoom=pixels per AU]
 ##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
+##   [--overlays=gravity,hill,-orbits] (show, or hide with a leading -)
 ##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y] [--smart=on]
 ## For the title screen: [--update=available] shows the update notice as
 ## when a newer build is out.
@@ -96,6 +97,10 @@ func _set_up_view(scene: Node, view: SpaceView, args: Dictionary[String, String]
 		view.camera.look_at(system.x(followed), system.y(followed))
 	if args.has("select"):
 		view.select(system.index_of(StringName(args["select"])))
+	if args.has("overlays"):
+		for overlay: String in args["overlays"].split(","):
+			if scene.has_method(&"set_overlay"):
+				scene.call(&"set_overlay", StringName(overlay.trim_prefix("-")), not overlay.begins_with("-"))
 	if args.get("true-scale", "") == "on":
 		view.true_scale = true
 	if args.get("menu", "") == "open" and scene.has_method(&"open_menu"):

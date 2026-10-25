@@ -37,6 +37,16 @@ var events: Array[Dictionary] = []
 var changes: int = 0
 ## Named small bodies (comets): particle index by name key.
 var particle_names: Dictionary[String, int] = {}
+## When true, each change the player makes keeps a copy of the system as it
+## was, run alongside (bodies only; a collision there is stepped over, not
+## resolved): what would have happened without it, for ghost trajectories.
+var keep_alternative: bool = false
+## That copy, or null.
+var alternative: NBodyState = null
+## The front of the change the copy was kept for: where it has arrived, the
+## real and the would-be paths part.
+var alternative_front: WaveFront = null
+var _alternative_pending: bool = false
 ## World law: how fast changes travel (AU per year). INF makes every change
 ## felt at once everywhere (the classic sandbox).
 var light_speed: float = Units.C
@@ -79,7 +89,7 @@ func leave_pristine() -> void:
 	# Each body keeps circling what it circled (the kernel reviews this
 	# before its first step; until then it is what the screen shows).
 	for i: int in count:
-		state.hill[i] = _hill_radius(i)
+		state.hill[i] = hill_radius(i)
 	var total_mass: float = 0.0
 	# 64-bit sums (Vector3 is 32-bit).
 	var momentum: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0])
@@ -113,6 +123,7 @@ func advance(real_seconds: float) -> void:
 			var target: float = clock.time + real_seconds * clock.years_per_second()
 			lagging = not _run_to(target, max_steps_per_frame, max_usec_per_frame)
 			clock.time = state.time if lagging else target
+			_run_alternative()
 		_core.call(&"preview", state, clock.time)
 		_show_view()
 	_update_fronts()
@@ -135,6 +146,7 @@ func place_body(
 	body: CelestialBody, x: float, y: float, z: float, vx: float, vy: float, vz: float, label_key: String
 ) -> int:
 	leave_pristine()
+	_keep_alternative()
 	var parent: int = dominant_body(x, y, z)
 	var index: int = system.add(body)
 	state.add_body(x, y, z, vx, vy, vz, 0.0, body.radius, Gravity.Mode.FREE, parent)
@@ -151,6 +163,7 @@ func remove_body(index: int, label_key: String) -> void:
 	leave_pristine()
 	if not is_present(index):
 		return
+	_keep_alternative()
 	_free_from_rails(index)
 	var b: int = index * 3
 	var light: float = state.final_light(index)
@@ -182,6 +195,7 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 	leave_pristine()
 	if not is_present(index):
 		return
+	_keep_alternative()
 	_free_from_rails(index)
 	var b: int = index * 3
 	var mass: float = state.final_mass(index)
@@ -294,7 +308,7 @@ func dominant_body(x: float, y: float, z: float) -> int:
 		var dy: float = y - state.view_pos[b + 1]
 		var dz: float = z - state.view_pos[b + 2]
 		var d2: float = dx * dx + dy * dy + dz * dz
-		var hill: float = _hill_radius(j)
+		var hill: float = hill_radius(j)
 		if hill < INF:
 			if d2 < hill * hill and hill < best_hill:
 				best = j
@@ -484,6 +498,50 @@ func jump_to_next_arrival() -> void:
 		set_time(clock.time + (float(left[0]["seconds"]) + 1.0) / Units.YEAR_SECONDS)
 
 
+## The five Lagrange points of a body and what it circles, as x, y, z
+## triples (L1 between them, L2 beyond the body, L3 opposite, L4 leading
+## by 60°, L5 trailing), or empty when it circles nothing.
+func lagrange_points(index: int) -> PackedFloat64Array:
+	var p: int = parent_of(index)
+	if p < 0 or not is_present(index):
+		return PackedFloat64Array()
+	var b: int = index * 3
+	var q: int = p * 3
+	var view: PackedFloat64Array = state.view_pos
+	var view_vel: PackedFloat64Array = state.view_vel
+	var r: Vector3 = Vector3(view[b] - view[q], view[b + 1] - view[q + 1], view[b + 2] - view[q + 2])
+	var v: Vector3 = Vector3(view_vel[b] - view_vel[q], view_vel[b + 1] - view_vel[q + 1], view_vel[b + 2] - view_vel[q + 2])
+	var m: float = state.final_mass(index)
+	var big: float = state.final_mass(p)
+	var mu: float = m / maxf(m + big, 1e-300)
+	var hill: float = pow(mu / 3.0, 1.0 / 3.0)
+	# The offsets from the parent in 64-bit; the turn by 60° only needs the
+	# direction of motion, so 32-bit vectors do for that.
+	var dx: float = view[b] - view[q]
+	var dy: float = view[b + 1] - view[q + 1]
+	var dz: float = view[b + 2] - view[q + 2]
+	var normal: Vector3 = r.cross(v).normalized()
+	var along: Vector3 = normal.cross(r)
+	var points: PackedFloat64Array = PackedFloat64Array()
+	for factor: float in [1.0 - hill, 1.0 + hill, -(1.0 + 5.0 * mu / 12.0)]:
+		points.append_array([view[q] + dx * factor, view[q + 1] + dy * factor, view[q + 2] + dz * factor])
+	for sign: float in [1.0, -1.0]:
+		var s60: float = sin(PI / 3.0) * sign
+		var c60: float = 0.5
+		points.append_array([
+			view[q] + dx * c60 + along.x * s60, view[q + 1] + dy * c60 + along.y * s60,
+			view[q + 2] + dz * c60 + along.z * s60,
+		])
+	return points
+
+
+## Sends a ring of light from a body, which changes nothing: to feel how
+## long light takes to cross the system. Returns the front's index.
+func light_pulse(index: int) -> int:
+	var b: int = index * 3
+	return emit_front(state.view_pos[b], state.view_pos[b + 1], state.view_pos[b + 2], true, false, "FRONT_PULSE", index)
+
+
 ## Starts a front at a point at the committed moment, carrying a change of
 ## light, of gravity or both, about a body (or -1). Returns its index, or -1
 ## when changes are felt at once (the "instant" world law).
@@ -529,7 +587,7 @@ func set_time(t: float) -> void:
 ## A body's Hill sphere around what it circles (INF at the top), from the
 ## masses everyone will feel once the news has spread: placing and
 ## circling bodies should not wait for the light.
-func _hill_radius(index: int) -> float:
+func hill_radius(index: int) -> float:
 	var parent: int = parent_of(index)
 	if parent < 0:
 		return INF
@@ -667,6 +725,35 @@ func _leave_ghost(index: int, front: int) -> int:
 	return ghost
 
 
+## Before a change: keeps the system as it is, bodies only, when asked to.
+func _keep_alternative() -> void:
+	if not keep_alternative:
+		return
+	alternative = state.copy()
+	alternative_front = null
+	_alternative_pending = true
+	for field: StringName in NBodyState.ARRAY_FIELDS:
+		if String(field).begins_with("p_"):
+			alternative.set(field, (alternative.get(field) as Variant).duplicate().slice(0, 0))
+	alternative.p_view = PackedFloat64Array()
+
+
+## Runs the copy of the system as it would have been to the shown moment.
+func _run_alternative() -> void:
+	if alternative == null:
+		return
+	if not keep_alternative:
+		alternative = null
+		alternative_front = null
+		return
+	alternative.rails_tau = state.rails_tau
+	for attempt: int in 100:
+		var result: Dictionary = _core.call(&"advance", alternative, clock.time, max_steps_per_frame, max_usec_per_frame)
+		if int(result["status"]) != Gravity.Status.EVENTS:
+			break
+	_core.call(&"preview", alternative, clock.time)
+
+
 ## Hands the changes still travelling for one body over to another.
 func _move_changes(from: int, to: int) -> void:
 	for d: int in state.delta_body.size():
@@ -699,6 +786,9 @@ func _free_from_rails(index: int) -> void:
 
 func _after_change(front: int) -> void:
 	changes += 1
+	if _alternative_pending:
+		_alternative_pending = false
+		alternative_front = fronts[front] if front >= 0 else null
 	state.acc_valid = false
 	if front >= 0:
 		_core.call(&"schedule_front", state, front)

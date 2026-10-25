@@ -61,6 +61,9 @@ var accepts_input: bool = true
 var selected: int = -1
 var followed: int = -1
 var true_scale: bool = false
+## The layers shown (the Tools tab switches them); the others are drawn by
+## OverlayView.
+var overlays: Dictionary[StringName, bool] = {&"orbits": true, &"fronts": true, &"hz": true}
 
 var _sprites: Array[BodySprite] = []
 var _spin: PackedFloat64Array = []
@@ -81,6 +84,7 @@ var _comet_heads: Dictionary[int, Vector2] = {}
 ## per body (empty when it circles nothing).
 var _elements: Array[PackedFloat64Array] = []
 var _changes_seen: int = -1
+var _orbits_drawn: int = 0
 var _hz: Node2D
 var _orbits: Node2D
 var _particles: Node2D
@@ -176,6 +180,11 @@ func pick(point: Vector2) -> int:
 			best = i
 			best_distance = distance
 	return best
+
+
+## How many orbits were drawn last frame.
+func orbits_drawn() -> int:
+	return _orbits_drawn
 
 
 ## How many small bodies of each kind were drawn on screen last frame.
@@ -281,6 +290,8 @@ func _layout(delta: float) -> void:
 
 
 func _draw_habitable_zone() -> void:
+	if not overlays.get(&"hz", true):
+		return
 	# Every star as it looks from the middle of the screen (its light, or
 	# the news that it is gone, may not have got here yet).
 	var system: StarSystem = simulation.system
@@ -315,6 +326,9 @@ func _draw_habitable_zone() -> void:
 
 
 func _draw_orbits() -> void:
+	_orbits_drawn = 0
+	if not overlays.get(&"orbits", true):
+		return
 	var system: StarSystem = simulation.system
 	var t: float = simulation.clock.time
 	var pristine: bool = simulation.is_pristine()
@@ -343,6 +357,7 @@ func _draw_orbits() -> void:
 			continue
 		if a > 0.0 and radius_px > LOCAL_ARC_PIXELS:
 			_draw_local_arc(i, color)
+			_orbits_drawn += 1
 			continue
 		if (
 			is_nan(_path_times[i]) or is_nan(period) or absf(t - _path_times[i]) > period * 0.02
@@ -364,6 +379,7 @@ func _draw_orbits() -> void:
 		var center: Vector2 = camera.to_screen(system.x(parent), system.y(parent))
 		var to_screen: Transform2D = Transform2D(Vector2(camera.scale, 0.0), Vector2(0.0, -camera.scale), center)
 		draw_dashed(_orbits, to_screen * _paths[i], a > 0.0, 0.0, color)
+		_orbits_drawn += 1
 
 
 ## Zoomed in far enough, a whole orbit is too big to draw precisely: draw an
@@ -596,6 +612,8 @@ func _draw_ghosts() -> void:
 ## goes), labelled with what changed where the ring is nearest the centre of
 ## the screen.
 func _draw_fronts(placed: Array[Rect2]) -> void:
+	if not overlays.get(&"fronts", true):
+		return
 	var view: Rect2 = Rect2(Vector2.ZERO, camera.viewport_size)
 	var font: Font = UiTheme.body_font()
 	var t: float = simulation.clock.time
@@ -612,6 +630,9 @@ func _draw_fronts(placed: Array[Rect2]) -> void:
 			continue
 		var changed: String = Format.body_name(simulation.system.body(front.body)) if front.body >= 0 else ""
 		var text: String = Format.tr_units(front.label_key, changed)
+		if front.label_key == "FRONT_PULSE":
+			# How long the light has been travelling.
+			text += "  ·  " + Format.duration((t - front.emitted_at) * Units.YEAR_SECONDS)
 		var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE).x
 		# Along the ring, starting where it is nearest the middle of the
 		# screen, the first spot that covers nothing.

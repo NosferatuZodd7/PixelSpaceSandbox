@@ -23,7 +23,8 @@ func test_every_power_is_complete() -> void:
 	var errors: PackedStringArray = loaded["errors"]
 	assert_true(errors.is_empty(), "; ".join(errors))
 	var powers: Array[Dictionary] = loaded["powers"]
-	assert_eq(powers.size(), 11, "the Cosmos powers")
+	assert_eq(powers.filter(func(power: Dictionary) -> bool: return power["tab"] == "cosmos").size(), 11, "the Cosmos powers")
+	assert_eq(powers.filter(func(power: Dictionary) -> bool: return power["tab"] == "tools").size(), 11, "and the tools")
 	var tab_ids: PackedStringArray = []
 	for tab: Variant in (JSON.parse_string(FileAccess.get_file_as_string(TABS_PATH)) as Dictionary)["tabs"]:
 		tab_ids.append(str((tab as Dictionary)["id"]))
@@ -94,8 +95,9 @@ func test_bad_powers_are_reported() -> void:
 		{"id": "comet", "tab": "cosmos", "action": "place", "icon": "power_star", "name_key": "A", "hint_key": "B",
 			"body": {"kind": "comet", "mass_suns": 1.0, "radius_km": 10, "name_key": "C"}},
 		{"id": "fine", "tab": "cosmos", "action": "delete", "icon": "power_delete", "name_key": "A", "hint_key": "B"},
+		{"id": "layer", "tab": "tools", "action": "overlay", "icon": "tool_hz", "name_key": "A", "hint_key": "B"},
 	]})
 	var errors: PackedStringArray = loaded["errors"]
-	assert_eq(errors.size(), 3, "; ".join(errors))
+	assert_eq(errors.size(), 4, "; ".join(errors))
 	assert_eq((loaded["powers"] as Array).size(), 1, "only the good power is kept")
 	assert_eq(PowerCatalog.parse(42)["errors"].size(), 1, "not a catalog at all")

@@ -1,5 +1,5 @@
 {
-	"notes": "God powers, shown as icon buttons in their toolbar tab. 'place' powers add a body: values are typical for that kind of object (the Sun's are real); a click puts it on a circular orbit around whatever dominates there, a drag throws it. A power with flyby_kms sweeps through instead: closest to its star at the click point, leaving at flyby_kms once far away. 'fling' throws an existing body, 'delete' removes one. Every change spreads at the speed of light.",
+	"notes": "God powers, shown as icon buttons in their toolbar tab. 'place' powers add a body: values are typical for that kind of object (the Sun's are real); a click puts it on a circular orbit around whatever dominates there, a drag throws it. A power with flyby_kms sweeps through instead: closest to its star at the click point, leaving at flyby_kms once far away. 'fling' throws an existing body, 'delete' removes one. Every change spreads at the speed of light. The Tools tab: 'overlay' toggles a layer of the view ('on' when it starts shown), 'ruler' measures, 'pulse' sends a ring of light from a body, 'laws' opens the world laws.",
 	"powers": [
 		{
 			"id": "sun_like_star",
@@ -173,6 +173,110 @@
 			"icon": "power_delete",
 			"name_key": "POWER_DELETE",
 			"hint_key": "POWER_DELETE_HINT"
+		},
+		{
+			"id": "overlay_orbits",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "orbits",
+			"on": true,
+			"icon": "tool_orbits",
+			"name_key": "TOOL_ORBITS",
+			"hint_key": "TOOL_ORBITS_HINT"
+		},
+		{
+			"id": "overlay_fronts",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "fronts",
+			"on": true,
+			"icon": "tool_fronts",
+			"name_key": "TOOL_FRONTS",
+			"hint_key": "TOOL_FRONTS_HINT"
+		},
+		{
+			"id": "overlay_hz",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "hz",
+			"on": true,
+			"icon": "tool_hz",
+			"name_key": "TOOL_HZ",
+			"hint_key": "TOOL_HZ_HINT"
+		},
+		{
+			"id": "overlay_ghosts",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "ghosts",
+			"on": false,
+			"icon": "tool_ghosts",
+			"name_key": "TOOL_GHOSTS",
+			"hint_key": "TOOL_GHOSTS_HINT"
+		},
+		{
+			"id": "overlay_hill",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "hill",
+			"on": false,
+			"icon": "tool_hill",
+			"name_key": "TOOL_HILL",
+			"hint_key": "TOOL_HILL_HINT"
+		},
+		{
+			"id": "overlay_lagrange",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "lagrange",
+			"on": false,
+			"icon": "tool_lagrange",
+			"name_key": "TOOL_LAGRANGE",
+			"hint_key": "TOOL_LAGRANGE_HINT"
+		},
+		{
+			"id": "overlay_gravity",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "gravity",
+			"on": false,
+			"icon": "tool_gravity",
+			"name_key": "TOOL_GRAVITY",
+			"hint_key": "TOOL_GRAVITY_HINT"
+		},
+		{
+			"id": "overlay_temperature",
+			"tab": "tools",
+			"action": "overlay",
+			"overlay": "temperature",
+			"on": false,
+			"icon": "tool_temperature",
+			"name_key": "TOOL_TEMPERATURE",
+			"hint_key": "TOOL_TEMPERATURE_HINT"
+		},
+		{
+			"id": "ruler",
+			"tab": "tools",
+			"action": "ruler",
+			"icon": "tool_ruler",
+			"name_key": "TOOL_RULER",
+			"hint_key": "TOOL_RULER_HINT"
+		},
+		{
+			"id": "light_pulse",
+			"tab": "tools",
+			"action": "pulse",
+			"icon": "tool_pulse",
+			"name_key": "TOOL_PULSE",
+			"hint_key": "TOOL_PULSE_HINT"
+		},
+		{
+			"id": "world_laws",
+			"tab": "tools",
+			"action": "laws",
+			"icon": "tool_laws",
+			"name_key": "TOOL_LAWS",
+			"hint_key": "TOOL_LAWS_HINT"
 		}
 	]
 }

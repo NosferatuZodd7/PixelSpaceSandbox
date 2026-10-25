@@ -301,6 +301,32 @@ out to keep it in view, time runs so it crosses half the view in 3 s
 or planet takes 1.5 s (`arrival_speed`), changing by at most ×8 per second
 (`ease_towards`).
 
+### Overlays and tools
+
+The Tools tab (entries in `data/powers.json` with tab "tools") switches
+layers on and off and holds two tools. `SpaceView` draws the orbits, the
+fronts and the habitable zone; `OverlayView`, after it in the scene, draws
+the rest:
+
+- gravity field and temperature: one shader (`field.gdshader`) adds up to
+  16 sources over the screen — the heaviest bodies' M / d², one dithered
+  band per tenfold change; or every star's L / d² as seen from the middle
+  of the screen, as the temperature of a planet with albedo 0.3, in bands
+  (below 150 K, 150–250, 250–320, 320–500, above 500);
+- Hill spheres (dashed) and, around each body, the Roche limit for a
+  typical moon of 3,000 kg/m³ (red);
+- the Lagrange points of the selected body and what it circles
+  (`Simulation.lagrange_points`: L1 and L2 at r·(μ/3)^(1/3), L3 opposite,
+  L4 and L5 at 60°);
+- ghost trajectories: with the overlay on, each change the player makes
+  keeps a copy of the system as it was (`Simulation.alternative`, bodies
+  only) that runs alongside; trails of the real and would-be positions are
+  drawn, and a ring where the change's front reached each body.
+
+The ruler measures between two points or bodies (AU, km, light-time); the
+light pulse sends a light-only front from a body (`light_pulse`), labelled
+with how long it has travelled.
+
 ### Changing the system: the Cosmos powers
 
 Powers come from `data/powers.json` (`PowerCatalog` parses them and builds

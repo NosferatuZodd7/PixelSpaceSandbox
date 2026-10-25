@@ -1,11 +1,13 @@
 class_name PowerTool
 extends Node2D
-## Uses the chosen Cosmos power in space: a place power puts a new body on
-## a circular orbit where the player clicks (or sweeping through, for a
-## flyby) and throws it when they drag; fling throws an existing body by
-## dragging from it; delete removes the body clicked. While aiming, the
-## path it would take around what it circles is drawn. Right click or Esc
-## puts the power away.
+## Uses the chosen Cosmos power or tool in space: a place power puts a new
+## body on a circular orbit where the player clicks (or sweeping through,
+## for a flyby) and throws it when they drag; fling throws an existing body
+## by dragging from it; delete removes the body clicked. While aiming, the
+## path it would take around what it circles is drawn. The ruler measures
+## a drag (in AU, km and light-time; an end on a body follows it), the
+## light pulse sends a ring of light from the body clicked. Right click or
+## Esc puts the power away.
 ##
 ## Sits after the space view in the scene, so it sees the mouse first.
 
@@ -30,6 +32,8 @@ var _pressed: bool = false
 var _press_at: Vector2 = Vector2.ZERO
 var _target: int = -1
 var _right_at: Vector2 = Vector2.ZERO
+## The ruler's two ends, each {"body": index} or {"point": [x, y, z]}.
+var _ruler_ends: Array[Dictionary] = []
 
 
 func setup(sim: Simulation, space_view: SpaceView) -> void:
@@ -41,7 +45,23 @@ func set_power(power: Dictionary) -> void:
 	_power = power
 	_pressed = false
 	_target = -1
+	_ruler_ends.clear()
 	queue_redraw()
+
+
+## What the ruler measures now ("1.00 AU  ·  149,597,871 km  ·  light: 8 min
+## 19 s"), or empty.
+func ruler_text() -> String:
+	if _ruler_ends.size() < 2:
+		return ""
+	var a: PackedFloat64Array = _end_position(_ruler_ends[0])
+	var b: PackedFloat64Array = _end_position(_ruler_ends[1])
+	var d: float = sqrt(pow(b[0] - a[0], 2.0) + pow(b[1] - a[1], 2.0) + pow(b[2] - a[2], 2.0))
+	return "%s  ·  %s  ·  %s" % [
+		Format.tr_units("UNIT_AU", Format.significant(d, 3)),
+		Format.tr_units("UNIT_KM", Format.number(Units.km_from_au(d))),
+		Format.tr_units("RULER_LIGHT", Format.duration(Units.light_time_seconds(d))),
+	]
 
 
 func is_active() -> bool:
@@ -84,6 +104,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_pressed = true
 		_press_at = button.position
 		_target = view.pick(button.position) if _action() != "place" else -1
+		if _action() == "ruler":
+			_ruler_ends = [_end_at(button.position), _end_at(button.position)]
 		return
 	if not _pressed:
 		return
@@ -104,7 +126,28 @@ func _unhandled_input(event: InputEvent) -> void:
 				if view.selected == target:
 					view.select(-1)
 				used.emit(_power, target)
+		"ruler":
+			_ruler_ends[1] = _end_at(button.position)
+		"pulse":
+			if _target != -1:
+				simulation.light_pulse(_target)
+				used.emit(_power, _target)
 	_target = -1
+
+
+## A ruler end: the body under the pixel, else the point in space there.
+func _end_at(at: Vector2) -> Dictionary:
+	var body: int = view.pick(at)
+	if body != -1:
+		return {"body": body}
+	return {"point": _point_at(at)}
+
+
+func _end_position(end: Dictionary) -> PackedFloat64Array:
+	if end.has("body"):
+		var b: int = int(end["body"]) * 3
+		return simulation.state.view_pos.slice(b, b + 3)
+	return end["point"]
 
 
 ## The point in space under a screen pixel, in the plane of what it would
@@ -207,6 +250,14 @@ func _draw() -> void:
 			var target: int = view.pick(_hover)
 			if target != -1:
 				_draw_brackets(view.screen_position(target), view.display_radius(target) + 3, Palette.color(&"ui_danger"))
+		"pulse":
+			var target: int = view.pick(_hover)
+			if target != -1:
+				_draw_brackets(view.screen_position(target), view.display_radius(target) + 3, Palette.color(&"light_front"))
+		"ruler":
+			if _pressed and _ruler_ends.size() == 2:
+				_ruler_ends[1] = _end_at(_hover)
+			_draw_ruler()
 
 
 ## The path a body at a point with a velocity would take around what
@@ -235,6 +286,26 @@ func _draw_path(point: PackedFloat64Array, v: PackedFloat64Array, mass: float, c
 	for k: int in PATH_POINTS:
 		path.append(center + Vector2(points[k * 3], -points[k * 3 + 1]) * view.camera.scale)
 	view.draw_dashed(self, path, elements[0] > 0.0, 0.0, color)
+
+
+func _draw_ruler() -> void:
+	if _ruler_ends.size() < 2:
+		return
+	var a: PackedFloat64Array = _end_position(_ruler_ends[0])
+	var b: PackedFloat64Array = _end_position(_ruler_ends[1])
+	var from: Vector2 = view.camera.to_screen(a[0], a[1]).round()
+	var to: Vector2 = view.camera.to_screen(b[0], b[1]).round()
+	var color: Color = Palette.color(&"ui_accent")
+	view.draw_dashed(self, PackedVector2Array([from, to]), false, 0.0, color)
+	for end: Vector2 in [from, to]:
+		draw_rect(Rect2(end - Vector2(1, 1), Vector2(3, 3)), color)
+	var text: String = ruler_text()
+	var font: Font = UiTheme.body_font()
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE).x
+	var at: Vector2 = ((from + to) * 0.5 + Vector2(-width * 0.5, -6.0)).round()
+	at = at.clamp(Vector2(2, 12), view.camera.viewport_size - Vector2(width + 2.0, 48.0))
+	draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, Palette.color(&"ui_shadow"))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, color)
 
 
 func _draw_brackets(center: Vector2, half: int, color: Color) -> void:

@@ -26,6 +26,7 @@ var _was_paused: bool = false
 
 @onready var _view: SpaceView = $View
 @onready var _powers: PowerTool = $Powers
+@onready var _overlays: OverlayView = $Overlays
 @onready var _ui: CanvasLayer = $UI
 @onready var _root: Control = $UI/Root
 @onready var _counter: TimeCounter = $UI/Root/TimeCounter
@@ -52,6 +53,10 @@ func _ready() -> void:
 	_view.setup(simulation)
 	_view.selection_changed.connect(_on_selection_changed)
 	_powers.setup(simulation, _view)
+	_overlays.setup(simulation, _view)
+	for overlay: StringName in _toolbar.overlays:
+		set_overlay(overlay, _toolbar.overlays[overlay])
+	_toolbar.overlay_toggled.connect(set_overlay)
 	_toolbar.power_changed.connect(_powers.set_power)
 	_powers.cancelled.connect(_toolbar.cancel_power)
 	_counter.clock = simulation.clock
@@ -73,6 +78,13 @@ func _process(delta: float) -> void:
 		simulation.advance(delta)
 	_time_controls.news_travelling = not simulation.fronts.is_empty()
 	_update_status()
+
+
+## Shows or hides a layer of the view (from the Tools tab).
+func set_overlay(overlay: StringName, on: bool) -> void:
+	_view.overlays[overlay] = on
+	if overlay == &"ghosts":
+		simulation.keep_alternative = on
 
 
 ## Runs time on to the moment the news of a change next reaches a body,

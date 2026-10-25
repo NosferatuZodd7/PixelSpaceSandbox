@@ -1,14 +1,14 @@
 class_name PowerCatalog
 extends RefCounted
-## The god powers listed in data/powers.json, and the bodies the "place"
-## powers add.
+## The god powers and tools listed in data/powers.json, and the bodies the
+## "place" powers add.
 ##
 ## Like the other data parsers it never prints: it returns
 ## {"powers": Array[Dictionary], "errors": PackedStringArray} so a broken
 ## catalog (or a mod's) can be reported instead of crashing the game.
 
 const PATH: String = "res://data/powers.json"
-const ACTIONS: Array[String] = ["place", "fling", "delete"]
+const ACTIONS: Array[String] = ["place", "fling", "delete", "overlay", "ruler", "pulse", "laws"]
 const FIELDS: Array[String] = ["id", "tab", "action", "icon", "name_key", "hint_key"]
 
 
@@ -83,6 +83,8 @@ static func _check(power: Dictionary, ids: PackedStringArray) -> PackedStringArr
 		errors.append("flyby_kms must be a positive number")
 	if not ACTIONS.has(str(power["action"])):
 		errors.append("unknown action '%s'" % power["action"])
+	elif power["action"] == "overlay" and (not power.get("overlay") is String or str(power["overlay"]).is_empty()):
+		errors.append("an 'overlay' power needs the overlay it shows")
 	elif power["action"] == "place":
 		if not power.get("body") is Dictionary:
 			errors.append("a 'place' power needs a body")

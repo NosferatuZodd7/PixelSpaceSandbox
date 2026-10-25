@@ -3,16 +3,22 @@ extends PanelContainer
 ## The god-powers toolbar along the bottom: a row of tabs from
 ## data/power_tabs.json and, below them, the selected tab's powers from
 ## data/powers.json as pixel icons, with the chosen power's name and how to
-## use it. Tabs whose powers arrive later say in which milestone.
+## use it. Tabs whose powers arrive later say in which milestone. Overlay
+## buttons switch a layer of the view on and off on their own; the world
+## laws button opens its panel; every other power is chosen one at a time.
 
 signal tab_changed(index: int)
 ## The chosen power changed; empty when none is chosen.
 signal power_changed(power: Dictionary)
+signal overlay_toggled(overlay: StringName, on: bool)
+signal laws_requested
 
 const TABS_PATH: String = "res://data/power_tabs.json"
 
 var tabs: Array[Dictionary] = []
 var current: int = -1
+## Which overlays are shown, starting as data/powers.json says.
+var overlays: Dictionary[StringName, bool] = {}
 
 var _buttons: Array[Button] = []
 var _powers: Array[Dictionary] = []
@@ -34,6 +40,9 @@ func _ready() -> void:
 	for message: String in loaded["errors"] as PackedStringArray:
 		push_error("Powers: %s" % message)
 	_powers = loaded["powers"]
+	for power: Dictionary in _powers:
+		if power["action"] == "overlay":
+			overlays[StringName(str(power["overlay"]))] = bool(power.get("on", false))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 3)
 	add_child(column)
@@ -131,11 +140,23 @@ func _build_power_row() -> void:
 		var button: Button = Button.new()
 		button.icon = PixelIcons.texture(StringName(str(power["icon"])))
 		button.tooltip_text = str(power["name_key"])
-		button.toggle_mode = true
-		button.button_group = _power_group
 		button.focus_mode = Control.FOCUS_NONE
 		button.theme_type_variation = &"IconButton"
-		button.toggled.connect(func(on: bool) -> void: _set_power(id if on else ""))
+		match str(power["action"]):
+			"overlay":
+				var overlay: StringName = StringName(str(power["overlay"]))
+				button.toggle_mode = true
+				button.button_pressed = overlays.get(overlay, false)
+				button.toggled.connect(func(on: bool) -> void:
+					overlays[overlay] = on
+					_describe(power)
+					overlay_toggled.emit(overlay, on))
+			"laws":
+				button.pressed.connect(func() -> void: laws_requested.emit())
+			_:
+				button.toggle_mode = true
+				button.button_group = _power_group
+				button.toggled.connect(func(on: bool) -> void: _set_power(id if on else ""))
 		_power_row.add_child(button)
 		_power_buttons[id] = button
 	_power_row.visible = not _power_buttons.is_empty()
@@ -152,6 +173,12 @@ func _set_power(id: String) -> void:
 	_power = chosen
 	_refresh()
 	power_changed.emit(_power)
+
+
+## Shows a power's name and how to use it, without choosing it.
+func _describe(power: Dictionary) -> void:
+	if _power.is_empty():
+		_content.text = "%s  ·  %s" % [tr(str(power["name_key"])), tr(str(power["hint_key"]))]
 
 
 func _refresh() -> void:

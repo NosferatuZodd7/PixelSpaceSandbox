@@ -143,6 +143,30 @@ UPDATE_ERROR_INSTALL,the files could not be replaced,não foi possível substitu
 NEWS_ARRIVES_IN,arrives in %s,chega daqui a %s
 TIME_NEXT_ARRIVAL,Jump to when the news next arrives (N),Saltar para a próxima chegada da notícia (N)
 TIME_FOLLOW_WAVE,Follow the wave (G),Seguir a onda (G)
+TOOL_ORBITS,Orbits,Órbitas
+TOOL_ORBITS_HINT,Show or hide the orbits,Mostrar ou esconder as órbitas
+TOOL_FRONTS,Light and gravity fronts,Frentes de luz e gravidade
+TOOL_FRONTS_HINT,Show or hide the news of each change as it spreads,Mostrar ou esconder a notícia de cada mudança a espalhar-se
+TOOL_HZ,Habitable zone,Zona habitável
+TOOL_HZ_HINT,Show or hide where liquid water could last,Mostrar ou esconder onde a água líquida pode durar
+TOOL_GHOSTS,Ghost trajectories,Trajetórias-fantasma
+TOOL_GHOSTS_HINT,After a change: where each body would have gone without it,Depois de uma mudança: por onde cada corpo teria ido sem ela
+TOOL_HILL,Hill spheres and Roche limits,Esferas de Hill e limites de Roche
+TOOL_HILL_HINT,Where each body holds its moons · where it tears them apart,Onde cada corpo segura as luas · onde as desfaz
+TOOL_LAGRANGE,Lagrange points,Pontos de Lagrange
+TOOL_LAGRANGE_HINT,Of the selected body and what it circles,Do corpo selecionado e do que ele orbita
+TOOL_GRAVITY,Gravity field,Campo gravítico
+TOOL_GRAVITY_HINT,How strongly everything pulls · brighter is stronger,A força da gravidade de tudo · mais claro é mais forte
+TOOL_TEMPERATURE,Temperature,Temperatura
+TOOL_TEMPERATURE_HINT,How warm a planet would be there,Quão quente um planeta estaria ali
+TOOL_RULER,Ruler,Régua
+TOOL_RULER_HINT,Drag to measure · from a body to follow it · right click: cancel,Arrasta para medir · a partir de um corpo para o seguir · botão direito: cancela
+TOOL_PULSE,Light pulse,Pulso de luz
+TOOL_PULSE_HINT,Click a body: a ring of light leaves it · right click: cancel,Clica num corpo: sai dele um anel de luz · botão direito: cancela
+TOOL_LAWS,World laws,Leis do mundo
+TOOL_LAWS_HINT,The rules of this universe,As regras deste universo
+FRONT_PULSE,Light from %s,Luz de %s
+RULER_LIGHT,light: %s,luz: %s
 TAB_COSMOS,Cosmos,Cosmos
 TAB_TERRAIN,Terrain,Terreno
 TAB_WEATHER,Weather and nature,Clima e natureza
