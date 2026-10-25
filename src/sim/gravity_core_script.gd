@@ -432,7 +432,7 @@ func _body_forces(s: NBodyState, t: float) -> float:
 			ax += f * dx
 			ay += f * dy
 			az += f * dz
-			if mi == FREE and mj != GHOST:
+			if mi == FREE and mj != GHOST and m >= Gravity.TAU_MASS_RATIO * mass[i]:
 				var orbit2: float = r2 * r / (g * (m + maxf(mass[i], 0.0)))
 				if orbit2 < tau2:
 					tau2 = orbit2

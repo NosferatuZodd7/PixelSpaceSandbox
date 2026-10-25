@@ -49,6 +49,10 @@ static func build() -> Theme:
 	theme.set_type_variation(&"DimLabel", &"Label")
 	theme.set_color(&"font_color", &"DimLabel", Palette.color(&"ui_text_dim"))
 
+	# Highlighted text: what is happening right now (paused, following, a warning).
+	theme.set_type_variation(&"KeyLabel", &"Label")
+	theme.set_color(&"font_color", &"KeyLabel", Palette.color(&"ui_accent"))
+
 	# Panel headers in the display font at its native size.
 	theme.set_type_variation(&"HeaderLabel", &"Label")
 	theme.set_font(&"font", &"HeaderLabel", display_font())

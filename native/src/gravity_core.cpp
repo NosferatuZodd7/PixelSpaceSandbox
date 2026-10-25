@@ -35,6 +35,7 @@ constexpr int64_t PARTICLE_MAX_LEVEL = 16;
 constexpr double WAKE_HILL = 3.0;
 constexpr double WAKE_REACH = 0.5;
 constexpr double SLEEP_FACTOR = 2.0;
+constexpr double TAU_MASS_RATIO = 1e-3;
 constexpr double SLEEP_REACH = 0.75;
 constexpr double SLEEP_HILL_SHARE = 0.4;
 constexpr double WAKE_HILL_SHARE = 0.5;
@@ -814,7 +815,7 @@ double GravityCore::body_forces(GravityState &s, double t) {
 			ax += f * dx;
 			ay += f * dy;
 			az += f * dz;
-			if (mi == FREE && mj != GHOST) {
+			if (mi == FREE && mj != GHOST && m >= TAU_MASS_RATIO * mass[i]) {
 				double orbit2 = r2 * r / (g * (m + maxf(mass[i], 0.0)));
 				if (orbit2 < tau2) {
 					tau2 = orbit2;

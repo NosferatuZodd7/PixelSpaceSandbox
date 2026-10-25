@@ -5,7 +5,7 @@ extends TestCase
 
 func test_clock_speeds_come_from_data() -> void:
 	var clock: SimClock = SimClock.load_default(0.0)
-	assert_eq(clock.speed(), 1.0, "starts in real time")
+	assert_eq(clock.speed(), 86400.0, "starts at one day per second, so planets visibly turn and move")
 	assert_eq(clock.ladder[0], 0.01, "slow motion")
 	assert_true(clock.ladder[clock.ladder.size() - 1] >= 1e9 * Units.YEAR_SECONDS, "up to billions of years per second")
 	assert_true(clock.use_preset("4"), "4 is a preset")
@@ -51,6 +51,7 @@ func test_front_reaches_a_body_after_distance_over_c() -> void:
 func test_finished_fronts_are_dropped() -> void:
 	var system: StarSystem = (PresetLoader.load_file("res://data/presets/solar_system.json") as Dictionary)["system"]
 	var simulation: Simulation = Simulation.new(system, SimClock.load_default(0.0))
+	simulation.clock.use_preset("1")
 	simulation.fronts.append(WaveFront.create(WaveFront.Kind.GRAVITY, 0.0, 0.0, 0.0, 0.0))
 	simulation.advance(1.0)
 	assert_eq(simulation.fronts.size(), 1, "still travelling after one second")

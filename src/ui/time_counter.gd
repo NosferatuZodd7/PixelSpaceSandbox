@@ -2,7 +2,7 @@ class_name TimeCounter
 extends VBoxContainer
 ## The big pixel time counter at the top of the screen: the date (or the
 ## year, far from today), and below it the speed ("x86 400 · 1 day/s") or
-## PAUSED.
+## PAUSED, and a warning when the simulation cannot keep up with it.
 
 ## Above this speed (simulated seconds per real second) the clock shows
 ## only the date, since hours and minutes would just flicker.
@@ -10,6 +10,8 @@ const DATE_ONLY_ABOVE: float = 3600.0
 const REFRESH_SECONDS: float = 0.1
 
 var clock: SimClock
+## When set, the counter warns while it lags behind the chosen speed.
+var simulation: Simulation
 
 var _date: Label
 var _speed: Label
@@ -46,6 +48,9 @@ func refresh() -> void:
 	else:
 		_speed.text = "%s  ·  %s" % [Format.multiplier(clock.speed()), speed_words(clock.speed())]
 		_speed.theme_type_variation = &"DimLabel"
+		if simulation != null and simulation.lagging:
+			_speed.text += "  ·  " + tr("TIME_LAGGING")
+			_speed.theme_type_variation = &"KeyLabel"
 
 
 func date_text() -> String:

@@ -1,5 +1,5 @@
 {
-	"notes": "Time speeds, in simulated seconds per real second, slowest first. + and - step through the ladder; the number keys jump to the presets.",
+	"notes": "Time speeds, in simulated seconds per real second, slowest first. + and - step through the ladder; the number keys jump to the presets. The game starts at one day per second, so planets visibly turn and move.",
 	"ladder_seconds_per_second": [
 		0.01, 0.1, 1, 10, 60, 600, 3600, 21600, 86400, 604800, 2629800,
 		31557600, 315576000, 3155760000, 31557600000, 315576000000,
@@ -17,5 +17,5 @@
 		"9": 315576000000,
 		"0": 31557600000000
 	},
-	"default_seconds_per_second": 1
+	"default_seconds_per_second": 86400
 }

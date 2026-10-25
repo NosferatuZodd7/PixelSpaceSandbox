@@ -24,6 +24,7 @@ var _was_paused: bool = false
 @onready var _ui: CanvasLayer = $UI
 @onready var _root: Control = $UI/Root
 @onready var _counter: TimeCounter = $UI/Root/TimeCounter
+@onready var _time_controls: TimeControls = $UI/Root/TimeControls
 @onready var _status: Label = $UI/Root/Status
 @onready var _window_layer: Control = $UI/Root/Windows
 @onready var _toolbar: Toolbar = $UI/Root/Toolbar
@@ -46,7 +47,10 @@ func _ready() -> void:
 	_view.setup(simulation)
 	_view.selection_changed.connect(_on_selection_changed)
 	_counter.clock = simulation.clock
+	_counter.simulation = simulation
 	_counter.refresh()
+	_time_controls.clock = simulation.clock
+	_time_controls.changed.connect(_counter.refresh)
 	_pause_menu.resume_requested.connect(close_menu)
 	_pause_menu.settings_requested.connect(_open_settings)
 	_pause_menu.title_requested.connect(func() -> void: get_tree().change_scene_to_file(TITLE_SCENE))

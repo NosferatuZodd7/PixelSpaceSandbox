@@ -62,8 +62,8 @@ func _windows() -> Array[InspectWindow]:
 func test_starts_on_the_given_date_with_the_solar_system() -> void:
 	assert_eq(_simulation().system.size(), 33, "Sun, planets, dwarf planets and moons")
 	var counter: TimeCounter = _screen.get_node("UI/Root/TimeCounter")
-	assert_eq(counter.date_text(), "13 OCT 2026  12:00")
-	assert_eq(counter.speed_text(), "x1  ·  real time")
+	assert_eq(counter.date_text(), "13 OCT 2026", "the date (hours and minutes would flicker at this speed)")
+	assert_eq(counter.speed_text(), "x86,400  ·  1 day per second", "starts at one day per second, so things visibly move")
 
 
 func test_time_runs_pauses_and_changes_speed() -> void:
@@ -88,6 +88,49 @@ func test_time_runs_pauses_and_changes_speed() -> void:
 	_action(&"speed_down")
 	await wait_frames(1)
 	assert_eq(clock.speed(), 21600.0, "- goes slower")
+
+
+func test_the_time_buttons_pause_and_change_speed() -> void:
+	var clock: SimClock = _simulation().clock
+	var controls: TimeControls = _screen.get_node("UI/Root/TimeControls")
+	_click(controls.pause_button().get_global_rect().get_center())
+	await wait_frames(1)
+	assert_true(clock.paused, "the pause button pauses")
+	_click(controls.pause_button().get_global_rect().get_center())
+	await wait_frames(1)
+	assert_false(clock.paused, "and resumes")
+	var speed: float = clock.speed()
+	_click(controls.faster_button().get_global_rect().get_center())
+	await wait_frames(1)
+	assert_true(clock.speed() > speed, "faster")
+	_click(controls.slower_button().get_global_rect().get_center())
+	_click(controls.slower_button().get_global_rect().get_center())
+	await wait_frames(1)
+	assert_true(clock.speed() < speed, "slower")
+
+
+func test_planets_keep_spinning_when_time_runs_fast() -> void:
+	var earth: int = _index(&"earth")
+	var sprite: BodySprite = _view.get_node("Bodies").get_child(earth)
+	_action(&"speed_7")
+	await wait_frames(2)
+	assert_true(sprite.visible, "the Earth is on screen")
+	var before: float = (sprite.material as ShaderMaterial).get_shader_parameter(&"spin")
+	await wait_frames(3)
+	var after: float = (sprite.material as ShaderMaterial).get_shader_parameter(&"spin")
+	assert_ne(after, before, "the Earth still turns (not frozen) at one year per second")
+
+
+func test_the_counter_says_when_the_game_cannot_keep_up() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.leave_pristine()
+	simulation.max_steps_per_frame = 1
+	_action(&"speed_7")
+	await wait_frames(4)
+	var counter: TimeCounter = _screen.get_node("UI/Root/TimeCounter")
+	assert_true(simulation.lagging, "the simulation is behind")
+	var says_so: bool = await wait_until(func() -> bool: return counter.speed_text().contains(tr("TIME_LAGGING")), 1.0)
+	assert_true(says_so, "the counter says so: %s" % counter.speed_text())
 
 
 func test_clicking_a_planet_opens_an_inspect_window() -> void:

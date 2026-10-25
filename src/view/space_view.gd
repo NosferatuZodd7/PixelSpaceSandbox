@@ -20,6 +20,9 @@ const LOCAL_ARC_PIXELS: float = 2500.0
 const LOCAL_ARC_SAMPLES: int = 48
 ## Hours in a Julian year, for spinning the discs.
 const HOURS_PER_YEAR: float = Units.YEAR_DAYS * 24.0
+## Faster than this (turns per real second) a disc's spin would only
+## flicker, so it is shown turning at this pace instead, the right way round.
+const MAX_VISUAL_TURNS: float = 1.0
 ## Label priority: lower draws first and wins overlaps.
 const PRIORITY: Dictionary[CelestialBody.Kind, int] = {
 	CelestialBody.Kind.STAR: 0, CelestialBody.Kind.PLANET: 1,
@@ -35,6 +38,7 @@ var followed: int = -1
 var true_scale: bool = false
 
 var _sprites: Array[BodySprite] = []
+var _spin: PackedFloat64Array = []
 var _screen: PackedVector2Array = []
 var _radii: PackedInt32Array = []
 var _shown: PackedByteArray = []
@@ -76,6 +80,7 @@ func setup(sim: Simulation) -> void:
 	_paths.resize(count)
 	_path_times.resize(count)
 	_path_times.fill(NAN)
+	_spin.resize(count)
 	for i: int in count:
 		var sprite: BodySprite = BodySprite.new()
 		sprite.setup(system.body(i), i, hash(system.body(i).id))
@@ -177,7 +182,6 @@ func _process(delta: float) -> void:
 
 func _layout(delta: float) -> void:
 	var system: StarSystem = simulation.system
-	var spin_rate_limit: float = 0.15
 	for i: int in system.size():
 		var b: CelestialBody = system.body(i)
 		var p: Vector2 = camera.to_screen(system.x(i), system.y(i)).round()
@@ -200,12 +204,13 @@ func _layout(delta: float) -> void:
 			var towards: Vector2 = camera.to_screen(system.x(star), system.y(star)) - camera.to_screen(system.x(i), system.y(i))
 			if towards.length_squared() > 1e-6:
 				light = towards.normalized()
-		var spin: float = 0.0
 		if b.rotation_hours != 0.0:
 			var turns_per_second: float = simulation.clock.years_per_second() * HOURS_PER_YEAR / b.rotation_hours
-			if simulation.clock.paused or absf(turns_per_second) * delta < spin_rate_limit:
-				spin = fposmod(simulation.clock.time * HOURS_PER_YEAR / b.rotation_hours, 1.0)
-		sprite.update_view(r, light, spin)
+			if simulation.clock.paused or absf(turns_per_second) <= MAX_VISUAL_TURNS:
+				_spin[i] = fposmod(simulation.clock.time * HOURS_PER_YEAR / b.rotation_hours, 1.0)
+			else:
+				_spin[i] = fposmod(_spin[i] + signf(turns_per_second) * MAX_VISUAL_TURNS * delta, 1.0)
+		sprite.update_view(r, light, _spin[i])
 
 
 func _draw_habitable_zone() -> void:
@@ -344,7 +349,7 @@ func _draw_overlay() -> void:
 	var view: Rect2 = Rect2(Vector2.ZERO, camera.viewport_size)
 	# Space kept free for the time counter and the toolbar.
 	var placed: Array[Rect2] = [
-		Rect2(view.size.x * 0.5 - 170.0, 0.0, 340.0, 36.0),
+		Rect2(view.size.x * 0.5 - 170.0, 0.0, 340.0, 52.0),
 		Rect2(0.0, view.size.y - 44.0, view.size.x, 44.0),
 	]
 	if selected != -1 and _shown[selected] == 1:

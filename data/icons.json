@@ -1,0 +1,46 @@
+{
+	"notes": "Pixel icons, drawn character by character: '.' is transparent and every other character is a palette colour from the legend. Each icon is a square.",
+	"legend": {
+		"X": "ui_text",
+		"A": "ui_accent",
+		"D": "ui_text_dim"
+	},
+	"icons": {
+		"pause": [
+			".......",
+			".XX.XX.",
+			".XX.XX.",
+			".XX.XX.",
+			".XX.XX.",
+			".XX.XX.",
+			"......."
+		],
+		"play": [
+			".......",
+			".X.....",
+			".XXX...",
+			".XXXXX.",
+			".XXX...",
+			".X.....",
+			"......."
+		],
+		"faster": [
+			".......",
+			"X...X..",
+			"XX..XX.",
+			"XXX.XXX",
+			"XX..XX.",
+			"X...X..",
+			"......."
+		],
+		"slower": [
+			".......",
+			"..X...X",
+			".XX..XX",
+			"XXX.XXX",
+			".XX..XX",
+			"..X...X",
+			"......."
+		]
+	}
+}

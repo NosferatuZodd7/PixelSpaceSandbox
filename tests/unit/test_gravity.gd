@@ -281,6 +281,22 @@ func test_the_same_state_has_the_same_future_however_the_frames_fall() -> void:
 			assert_true(s.get(field) == other.get(field), "%s: %s identical" % [kernel_name, field])
 
 
+func test_a_tiny_moon_on_rails_does_not_shorten_its_planet_s_steps() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = _sun_and_earth()
+		# A Phobos-like moon (mass 2e-8 of its planet) on rails 0.0001 AU out.
+		var moon_v: float = sqrt(Units.G * EARTH_MASS / 1e-4)
+		var moon: int = s.add_body(1.0001, 0.0, 0.0, 0.0, s.vel[4] + moon_v, 0.0, EARTH_MASS * 2e-8, 1e-8, Gravity.Mode.FREE, -1)
+		s.set_rails_from_state(moon, 1)
+		# Fast orbits (under about four days) may ride rails, as when time runs fast.
+		s.rails_tau = 0.01
+		_advance(kernel, s, 0.01)
+		assert_eq(s.mode[moon], Gravity.Mode.RAILS, "%s: the moon rides rails" % kernel_name)
+		var step_days: float = Gravity.step_size(s.level) * Units.YEAR_DAYS
+		assert_true(step_days > 0.5, "%s: steps set by the Earth's year, not the moon's 6-hour orbit (%s days)" % [kernel_name, step_days])
+
+
 func test_bodies_on_a_collision_course_are_reported() -> void:
 	for kernel_name: String in _kernels():
 		var kernel: Object = _kernels()[kernel_name]

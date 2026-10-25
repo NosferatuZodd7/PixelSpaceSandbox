@@ -24,7 +24,8 @@ The title screen has a menu (mouse, or arrows + Enter, Esc to go back).
 **Settings** changes the language, window or fullscreen, and vertical sync;
 choices are saved between sessions. **F11** toggles fullscreen anywhere.
 
-**New system** opens the Solar System on today's date. In the game:
+**New system** opens the Solar System on today's date, running at one day
+per second. In the game:
 
 | Key / mouse | Does |
 | --- | --- |
@@ -34,8 +35,8 @@ choices are saved between sessions. **F11** toggles fullscreen anywhere.
 | Double-click, F | Follow the selected body |
 | H | Back to the star |
 | T | True scale on/off |
-| Space | Pause |
-| + / − | Faster / slower |
+| Space, or the ‖ button under the date | Pause |
+| + / −, or the ›› / ‹‹ buttons | Faster / slower |
 | 1 … 0 | Speeds from real time to a million years per second |
 | F1 … F8 | Toolbar tabs |
 | Tab | Hide or show the interface |

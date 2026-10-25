@@ -98,6 +98,11 @@ TIME_PAUSED,PAUSED  ·  Space to resume,PAUSA  ·  Espaço para continuar
 TIME_SLOW_MOTION,slow motion,câmara lenta
 TIME_REAL,real time,tempo real
 TIME_PER_SECOND,%s per second,%s por segundo
+TIME_LAGGING,the simulation cannot keep up,a simulação não acompanha
+TIME_SLOWER,Slower (−),Mais devagar (−)
+TIME_FASTER,Faster (+),Mais depressa (+)
+TIME_PAUSE,Pause (Space),Pausa (Espaço)
+TIME_RESUME,Resume (Space),Continuar (Espaço)
 YEAR_LABEL,YEAR %s,ANO %s
 MONTH_1,JAN,JAN
 MONTH_2,FEB,FEV

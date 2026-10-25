@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://src/ui/toolbar.gd" id="5_toolbar"]
 [ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="6_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="7_settings"]
+[ext_resource type="Script" path="res://src/ui/time_controls.gd" id="8_time_controls"]
 
 [node name="Space" type="Node"]
 script = ExtResource("1_space")
@@ -39,6 +40,16 @@ offset_bottom = 40.0
 grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("4_counter")
+
+[node name="TimeControls" type="HBoxContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 38.0
+offset_bottom = 50.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("8_time_controls")
 
 [node name="Status" type="Label" parent="UI/Root"]
 layout_mode = 1

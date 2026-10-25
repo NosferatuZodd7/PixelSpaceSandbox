@@ -155,7 +155,11 @@ untouched preset stays on these rails.
 
 One `SimClock` in years since J2000.0. Its speeds come from
 `data/time_speeds.json`: from ×0.01 through real time to a billion years per
-second; + and − step, the number keys jump to presets, Space pauses.
+second; + and − step, the number keys jump to presets, Space pauses, and the
+buttons under the counter do the same. The game starts at one day per
+second so planets visibly turn and move. Discs show their real rotation
+until it would exceed one turn per real second; beyond that they turn at
+that pace, the right way round, rather than flicker or freeze.
 
 ### Light and gravity fronts
 
@@ -257,6 +261,21 @@ parent's surface, around a body that circles another its whole orbit stays
 within 40% of that body's Hill sphere, and every other body is farther than
 twice its wake zone (capped at three quarters of that body's distance to
 the particle's parent, but never inside the wake zone itself).
+
+### The game on the kernel
+
+`Simulation` keeps the untouched preset on its real orbits (exact, as in
+M1). The first change to the system calls `leave_pristine()`: every body
+starts integrating from exactly where its orbit put it, with velocities
+shifted so the system's centre of mass is at rest. Each frame asks the
+kernel to reach the shown moment within a budget (4,000 steps, 6 ms); if
+it cannot, the clock waits for it and the counter says the simulation
+cannot keep up. At high speeds moons whose orbits would need more than
+about 60 steps per frame ride rails around their planet (Phobos at one
+week per second; every moon but ours and the outermost at one year per
+second), and come back to full integration when time slows down. A body
+sets another's step only if it has at least a thousandth of its mass, so
+a tiny moon on rails no longer forces its planet into minute-long steps.
 
 ### Collisions
 

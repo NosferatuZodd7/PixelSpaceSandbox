@@ -9,8 +9,39 @@ extends SceneTree
 
 const TEST_ROOT: String = "res://tests"
 
+var _catcher: ErrorCatcher = ErrorCatcher.new()
+
+
+## Records every error and warning Godot reports. A script error inside a
+## test only stops that test function, which would otherwise look like a
+## pass; the runner fails any test during which something was reported.
+class ErrorCatcher:
+	extends Logger
+
+	var _mutex: Mutex = Mutex.new()
+	var _reports: PackedStringArray = []
+
+	func _log_error(
+		function: String, file: String, line: int, code: String, rationale: String,
+		_editor_notify: bool, error_type: int, _script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		var kind: String = "WARNING" if error_type == Logger.ERROR_TYPE_WARNING else "ERROR"
+		var text: String = rationale if not rationale.is_empty() else code
+		_mutex.lock()
+		_reports.append("%s: %s (%s:%d in %s)" % [kind, text, file.get_file(), line, function])
+		_mutex.unlock()
+
+	## The reports since the last call.
+	func take() -> PackedStringArray:
+		_mutex.lock()
+		var found: PackedStringArray = _reports.duplicate()
+		_reports.clear()
+		_mutex.unlock()
+		return found
+
 
 func _initialize() -> void:
+	OS.add_logger(_catcher)
 	_run.call_deferred()
 
 
@@ -36,9 +67,12 @@ func _run() -> void:
 			if not filter.is_empty() and not label.contains(filter):
 				continue
 			case.clear_failures()
+			_catcher.take()
 			await case.call(&"before_each")
 			await case.call(method_name)
 			await case.call(&"after_each")
+			for report: String in _catcher.take():
+				case.failures().append("Godot reported %s" % report)
 			if case.failures().is_empty():
 				print("PASS  %s" % label)
 				passed += 1

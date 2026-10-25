@@ -59,6 +59,11 @@ const WAKE_HILL_SHARE: float = 0.5
 ## A passing mass change wakes an asleep particle when it changes the pull
 ## on it by more than this share of its parent's.
 const FRONT_WAKE_RATIO: float = 1e-6
+## A body sets another's step only if it has at least this share of its
+## mass: a tiny moon barely tugs its planet, so its quick orbit need not
+## shorten the planet's steps (it gets short steps of its own when it is
+## integrated).
+const TAU_MASS_RATIO: float = 1e-3
 ## Most fronts a mass change can be gated by at once (bits in a mask).
 const MAX_FRONTS: int = 30
 
