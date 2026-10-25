@@ -1282,9 +1282,12 @@ void GravityCore::enqueue(const GravityState &s, int32_t p) {
 
 bool GravityCore::check_asleep(GravityState &s, int64_t p) {
 	int64_t primary = s.p_primary[p];
-	if (primary < 0 || s.mode[primary] == GONE || s.mode[primary] == GHOST) {
+	if (primary < 0 || s.mode[primary] == GONE) {
 		return true;
 	}
+	// Around a ghost it rides on until the news that its primary changed
+	// arrives (a check scheduled by schedule_front).
+	bool ghost = s.mode[primary] == GHOST;
 	double rel[6];
 	state_from_element_set(s.p_elem.data() + p * ES, s.time, rel);
 	int64_t pb = primary * 3;
@@ -1298,7 +1301,7 @@ bool GravityCore::check_asleep(GravityState &s, int64_t p) {
 	if (r_primary < 3.0 * s.radius[primary]) {
 		return true;
 	}
-	if (s.hill[primary] < INF && r_primary > WAKE_HILL_SHARE * s.hill[primary]) {
+	if (!ghost && s.hill[primary] < INF && r_primary > WAKE_HILL_SHARE * s.hill[primary]) {
 		return true;
 	}
 	std::vector<int32_t> up = ancestors(s, primary);

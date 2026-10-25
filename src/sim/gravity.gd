@@ -19,6 +19,9 @@ enum Mode {
 
 enum ParticleMode { ASLEEP, AWAKE, GONE }
 
+## What a particle is, for drawing and events (the kernels ignore it).
+enum ParticleKind { ASTEROID, ICY, OORT, COMET, DEBRIS }
+
 ## Why an advance() call returned.
 enum Status {
 	## Reached the target time.

@@ -19,6 +19,9 @@ VSYNC_ON,On,Ligada
 VSYNC_OFF,Off,Desligada
 PRESET_SOLAR_SYSTEM,Solar System,Sistema Solar
 BODY_SUN,Sun,Sol
+BODY_HALLEY,Halley,Halley
+BODY_ENCKE,Encke,Encke
+BODY_HALE_BOPP,Hale-Bopp,Hale-Bopp
 BODY_MERCURY,Mercury,Mercúrio
 BODY_VENUS,Venus,Vénus
 BODY_EARTH,Earth,Terra

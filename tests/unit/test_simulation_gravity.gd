@@ -32,6 +32,8 @@ func test_the_untouched_system_rides_its_real_orbits() -> void:
 
 func test_a_disturbed_solar_system_keeps_its_shape_under_real_gravity() -> void:
 	var simulation: Simulation = _simulation()
+	# About orbits, not speed: the benchmark measures that.
+	simulation.max_usec_per_frame = 1 << 30
 	simulation.leave_pristine()
 	assert_false(simulation.is_pristine(), "now integrated")
 	var state: NBodyState = simulation.state

@@ -54,6 +54,18 @@ static func parse(data: Variant) -> Dictionary:
 			system.body(index).barycenter_partner = partner
 	if system.size() == 0 or not system.body(0).is_star():
 		errors.append("the first body must be a star")
+	for entry: Variant in root.get("belts", []):
+		var belt_errors: PackedStringArray = SmallBodies.check_belt(entry, system)
+		if belt_errors.is_empty():
+			system.belts.append(entry)
+		for message: String in belt_errors:
+			errors.append("belt %s: %s" % [(entry as Dictionary).get("id", "?") if entry is Dictionary else "?", message])
+	for entry: Variant in root.get("comets", []):
+		var comet_errors: PackedStringArray = SmallBodies.check_comet(entry, system)
+		if comet_errors.is_empty():
+			system.comets.append(entry)
+		for message: String in comet_errors:
+			errors.append("comet %s: %s" % [(entry as Dictionary).get("id", "?") if entry is Dictionary else "?", message])
 	return {"system": system, "errors": errors}
 
 

@@ -10,6 +10,10 @@ var name_key: String = ""
 var bodies: Array[CelestialBody] = []
 var positions: PackedFloat64Array = []
 var velocities: PackedFloat64Array = []
+## Crowds of small bodies, as the preset describes them (see SmallBodies).
+var belts: Array[Dictionary] = []
+## Named comets, as the preset describes them (see SmallBodies).
+var comets: Array[Dictionary] = []
 
 
 func size() -> int:

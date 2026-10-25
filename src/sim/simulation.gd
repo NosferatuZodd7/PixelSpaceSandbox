@@ -35,6 +35,8 @@ var events: Array[Dictionary] = []
 ## Counts the changes made to the system (places, removals, flings), so
 ## views know when to redraw what they cache.
 var changes: int = 0
+## Named small bodies (comets): particle index by name key.
+var particle_names: Dictionary[String, int] = {}
 ## World law: how fast changes travel (AU per year). INF makes every change
 ## felt at once everywhere (the classic sandbox).
 var light_speed: float = Units.C
@@ -58,6 +60,7 @@ func _init(star_system: StarSystem, sim_clock: SimClock) -> void:
 		)
 		state.light_base[i] = b.luminosity
 	_copy_rails_into_state()
+	particle_names = SmallBodies.populate(state, system, clock.time, state.g_scale)
 
 
 func is_pristine() -> bool:
@@ -101,6 +104,8 @@ func advance(real_seconds: float) -> void:
 		clock.advance(real_seconds)
 		system.place_on_orbits(clock.time)
 		_copy_rails_into_state()
+		if state.particle_count() > 0:
+			_core.call(&"preview", state, clock.time)
 	else:
 		lagging = false
 		if not clock.paused:
@@ -111,6 +116,11 @@ func advance(real_seconds: float) -> void:
 		_core.call(&"preview", state, clock.time)
 		_show_view()
 	_update_fronts()
+
+
+## The particle of a named small body (a comet), or -1.
+func particle_named(name_key: String) -> int:
+	return particle_names.get(name_key, -1)
 
 
 ## Whether a body is still part of the system (not removed, not a ghost).
@@ -454,6 +464,7 @@ func set_time(t: float) -> void:
 		clock.time = t
 		system.place_on_orbits(t)
 		_copy_rails_into_state()
+		_core.call(&"preview", state, t)
 		return
 	if t < state.time:
 		push_error("Simulation.set_time: an integrated system cannot go back to %s (it is at %s)" % [t, state.time])
@@ -659,8 +670,8 @@ func _show_view() -> void:
 	system.velocities = state.view_vel.duplicate()
 
 
-## A front is finished once it has passed every body and particle by a
-## safe margin: its changes are then folded into the masses and brightness
+## A front is finished once it has passed every body and awake particle by
+## a safe margin: its changes are then folded into the masses and brightness
 ## everyone feels, and a ghost whose removal is known everywhere is gone.
 func _update_fronts() -> void:
 	var f: int = 0
@@ -688,8 +699,11 @@ func _front_passed_everything(f: int) -> bool:
 		var dz: float = state.view_pos[b + 2] - oz
 		if sqrt(dx * dx + dy * dy + dz * dz) * 1.01 > reach:
 			return false
+	# Asleep particles ride fixed conics and notice a change only when they
+	# are next checked, which the kernel schedules for when its news
+	# arrives; they need not hold a front back.
 	for p: int in state.particle_count():
-		if state.p_mode[p] == Gravity.ParticleMode.GONE:
+		if state.p_mode[p] != Gravity.ParticleMode.AWAKE:
 			continue
 		var b: int = p * 3
 		var dx: float = state.p_view[b] - ox

@@ -873,8 +873,11 @@ func _enqueue(s: NBodyState, p: int) -> void:
 ## check from how soon anything could come close.
 func _check_asleep(s: NBodyState, p: int) -> bool:
 	var primary: int = s.p_primary[p]
-	if primary < 0 or s.mode[primary] == GONE or s.mode[primary] == GHOST:
+	if primary < 0 or s.mode[primary] == GONE:
 		return true
+	# Around a ghost it rides on until the news that its primary changed
+	# arrives (a check scheduled by schedule_front).
+	var ghost: bool = s.mode[primary] == GHOST
 	var rel: PackedFloat64Array = Kepler.state_from_element_set(s.p_elem, p * ES, s.time)
 	var pb: int = primary * 3
 	var x: float = s.pos[pb] + rel[0]
@@ -886,7 +889,7 @@ func _check_asleep(s: NBodyState, p: int) -> bool:
 	var r_primary: float = sqrt(rel[0] * rel[0] + rel[1] * rel[1] + rel[2] * rel[2])
 	if r_primary < 3.0 * s.radius[primary]:
 		return true
-	if s.hill[primary] < INF and r_primary > Gravity.WAKE_HILL_SHARE * s.hill[primary]:
+	if not ghost and s.hill[primary] < INF and r_primary > Gravity.WAKE_HILL_SHARE * s.hill[primary]:
 		return true
 	var ancestors: PackedInt32Array = _ancestors(s, primary)
 	var soonest: float = MAX_CHECK_INTERVAL

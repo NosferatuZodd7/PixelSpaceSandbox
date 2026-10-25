@@ -9,8 +9,96 @@
 		"jpl_sbdb_ceres": "JPL Small-Body Database elements for 1 Ceres, epoch JD 2460000.5, as listed by TheSkyLive: https://www.theskylive.com/ceres-info",
 		"jpl_eris": "JPL osculating elements for 136199 Eris (2014 epoch), as listed by Johnston's Archive: https://johnstonsarchive.net/astro/astmoons/am-136199.html",
 		"jpl_satellites": "JPL Solar System Dynamics, Planetary Satellite Mean Elements and Physical Parameters (sizes, periods, eccentricities, inclinations): https://ssd.jpl.nasa.gov/sats/ ; positions along the orbit are approximate",
-		"iau_wgccre_2015": "IAU WGCCRE 2015 report (Archinal et al. 2018), directions of the planets' north poles"
+		"iau_wgccre_2015": "IAU WGCCRE 2015 report (Archinal et al. 2018), directions of the planets' north poles",
+		"jpl_sbdb_comets": "JPL Small-Body Database osculating elements for 1P/Halley, 2P/Encke and C/1995 O1 (Hale-Bopp), rounded: https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+		"belts": "Belts are generated, not real objects: the asteroid belt between 2.1 and 3.3 AU with the Kirkwood gaps (3:1, 5:2, 7:3 and 2:1 resonances with Jupiter), the Kuiper belt and its plutinos (3:2 with Neptune), and the Oort cloud from 2,000 to 100,000 AU (Murray & Dermott, Solar System Dynamics; NASA Solar System Exploration)"
 	},
+	"belts_note": "Each belt is a crowd of small bodies drawn at random (the same every time) on orbits around its parent: a (AU) and e uniform in their ranges (a log-uniform when log_a is true) except in the gaps, inclinations folded-normal with i_sigma_deg (or random in all directions when isotropic), the rest uniform. Kinds: asteroid, icy, oort.",
+	"belts": [
+		{
+			"id": "asteroid_belt",
+			"kind": "asteroid",
+			"parent": "sun",
+			"count": 1200,
+			"a_au": [2.1, 3.3],
+			"gaps_au": [[2.47, 2.53], [2.80, 2.86], [2.94, 2.98], [3.25, 3.3]],
+			"e": [0.0, 0.25],
+			"i_sigma_deg": 8.0,
+			"radius_km": 20.0
+		},
+		{
+			"id": "kuiper_belt",
+			"kind": "icy",
+			"parent": "sun",
+			"count": 700,
+			"a_au": [40.0, 48.0],
+			"e": [0.0, 0.15],
+			"i_sigma_deg": 6.0,
+			"radius_km": 50.0
+		},
+		{
+			"id": "plutinos",
+			"kind": "icy",
+			"parent": "sun",
+			"count": 150,
+			"a_au": [39.2, 39.7],
+			"e": [0.1, 0.3],
+			"i_sigma_deg": 10.0,
+			"radius_km": 50.0
+		},
+		{
+			"id": "oort_cloud",
+			"kind": "oort",
+			"parent": "sun",
+			"count": 600,
+			"a_au": [2000.0, 100000.0],
+			"log_a": true,
+			"e": [0.0, 0.6],
+			"isotropic": true,
+			"radius_km": 5.0
+		}
+	],
+	"comets": [
+		{
+			"id": "halley",
+			"name_key": "BODY_HALLEY",
+			"parent": "sun",
+			"source": "jpl_sbdb_comets",
+			"q_au": 0.586,
+			"e": 0.96714,
+			"i_deg": 162.263,
+			"node_deg": 58.420,
+			"arg_peri_deg": 111.332,
+			"perihelion_jd": 2446470.5,
+			"radius_km": 5.5
+		},
+		{
+			"id": "encke",
+			"name_key": "BODY_ENCKE",
+			"parent": "sun",
+			"source": "jpl_sbdb_comets",
+			"q_au": 0.336,
+			"e": 0.8483,
+			"i_deg": 11.78,
+			"node_deg": 334.57,
+			"arg_peri_deg": 186.54,
+			"perihelion_jd": 2460240.2,
+			"radius_km": 2.4
+		},
+		{
+			"id": "hale_bopp",
+			"name_key": "BODY_HALE_BOPP",
+			"parent": "sun",
+			"source": "jpl_sbdb_comets",
+			"q_au": 0.914,
+			"e": 0.99498,
+			"i_deg": 89.43,
+			"node_deg": 282.47,
+			"arg_peri_deg": 130.59,
+			"perihelion_jd": 2450539.6,
+			"radius_km": 30.0
+		}
+	],
 	"bodies": [
 		{
 			"id": "sun",

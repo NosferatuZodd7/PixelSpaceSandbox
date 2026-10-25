@@ -191,6 +191,33 @@ func test_a_particle_wakes_when_a_planet_comes_near() -> void:
 		assert_true(woken >= 1, "%s: woken when Earth came near" % kernel_name)
 
 
+func test_a_far_particle_sleeps_on_until_its_star_s_removal_reaches_it() -> void:
+	for kernel_name: String in _kernels():
+		var kernel: Object = _kernels()[kernel_name]
+		var s: NBodyState = _sun_and_earth()
+		# 40,000 AU out: the news that the Sun is gone takes 231 days; the
+		# particle has routine checks (every quarter of a year at most) before.
+		var mu: float = Units.G
+		var state: PackedFloat64Array = Kepler.state_from_elements(40000.0, 0.1, 0.3, 0.0, 0.0, 1.0, Kepler.mean_motion(40000.0, 1.0))
+		var elements: PackedFloat64Array = Kepler.elements_from_state(
+			state[0], state[1], state[2], state[3], state[4], state[5], mu, s.time
+		)
+		var far: int = s.add_sleeping_particle(0, elements, 1e-9, 0)
+		_advance(kernel, s, 0.01)
+		var front: int = _front(s, s.pos[0], s.pos[1], s.pos[2])
+		s.mode[0] = Gravity.Mode.GHOST
+		_delta(s, 0, front, -1.0)
+		kernel.call(&"schedule_front", s, front)
+		var distance: float = Vector3(state[0], state[1], state[2]).length()
+		var arrival: float = s.time + distance / Units.C
+		# Steps here last weeks (a sixteenth of a year or more); the particle
+		# is checked between them.
+		_advance(kernel, s, arrival - 0.15)
+		assert_eq(s.p_mode[far], Gravity.ParticleMode.ASLEEP, "%s: still asleep two months before the news arrives" % kernel_name)
+		_advance(kernel, s, arrival + 0.3)
+		assert_eq(s.p_mode[far], Gravity.ParticleMode.AWAKE, "%s: awake once it has" % kernel_name)
+
+
 func test_a_distant_companion_star_leaves_the_belt_asleep() -> void:
 	for kernel_name: String in _kernels():
 		var kernel: Object = _kernels()[kernel_name]
