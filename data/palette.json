@@ -32,7 +32,6 @@
 		{ "id": "light_front_dim", "hex": "#c49c46", "group": "fronts" },
 		{ "id": "gravity_front", "hex": "#9b7cff", "group": "fronts" },
 		{ "id": "gravity_front_dim", "hex": "#5a45ae", "group": "fronts" },
-		{ "id": "hz_dim", "hex": "#1d5838", "group": "overlays" },
 		{ "id": "hz", "hex": "#3c9853", "group": "overlays" },
 		{ "id": "ocean_deep", "hex": "#0f2f5c", "group": "terrain" },
 		{ "id": "ocean", "hex": "#1c5494", "group": "terrain" },

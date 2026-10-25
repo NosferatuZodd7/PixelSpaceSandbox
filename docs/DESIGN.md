@@ -82,7 +82,7 @@ Everything fits the 640×360 frame in English and Portuguese, which
 
 ### Colours
 
-All colours come from one palette, `data/palette.json` (56 colours plus
+All colours come from one palette, `data/palette.json` (55 colours plus
 semantic aliases such as `ui_text`). Code asks for them by name with
 `Palette.color(&"nebula_3")`. A test fails if any script under `src/` writes
 a colour value directly, or names a colour the palette does not have.
@@ -220,9 +220,8 @@ creates fronts when the player changes the system:
   an exact arc around its body instead, so the line passes through it at any
   zoom.
 - Names never cover bodies, each other, the counter or the toolbar.
-- The habitable zone is a dithered green band (one pixel in eight filled,
-  so what is inside stays clear) whose fill fades out when it is much wider
-  than the screen. Since milestone 2 a shader
+- The habitable zone is drawn as its two green edges only (until milestone
+  2 it also had a dithered fill, which hid what was inside it). Since milestone 2 a shader
   (`habitable_zone.gdshader`) draws it from the starlight of every star (up
   to 8) as seen from the middle of the screen: where a planet would get
   between 0.53 and 1.1 times the Earth's light. One star gives a ring; two
@@ -578,5 +577,5 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 | 19 | Collisions merge bodies; a pass inside the Roche limit (rigid-body factor 2) tears the lighter body into a ring; both found by the kernels at every step | 2026-10 |
 | 20 | The game updates itself from GitHub releases: every push to `beta` is a test build; channels test/final/off; SHA-256 checked; files swapped by renaming (owner's request, as in OrbisLink) | 2026-10 |
 | 21 | Departure Mono (11 px) for interface text and window headers; Press Start 2P only for the title and the date (owner found Micro 5 hard to read) | 2026-10 |
-| 22 | No dithering in the sky backdrop: nebulae in flat bands of colour (owner's request) | 2026-10 |
+| 22 | No dithering in the sky backdrop: nebulae in flat bands of colour; the habitable zone as its two edges, without a fill (owner's request) | 2026-10 |
 | 23 | Builds only for code pushes to `main`/`beta`, tags and manual runs; documentation-only pushes and pull requests do not build (to save Actions minutes) | 2026-10 |

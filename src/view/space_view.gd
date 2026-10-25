@@ -12,9 +12,6 @@ extends Node2D
 signal selection_changed(index: int)
 
 const HZ_SHADER: Shader = preload("res://assets/shaders/habitable_zone.gdshader")
-## Share of the habitable zone's pixels that are filled: light enough to
-## see the planets and orbits through it.
-const HZ_DENSITY: float = 0.125
 ## The habitable zone is drawn from this many stars at most (the shader's).
 const HZ_MAX_STARS: int = 8
 const ZOOM_STEP: float = 1.25
@@ -121,7 +118,6 @@ func setup(sim: Simulation) -> void:
 	_overlay.draw.connect(_draw_overlay)
 	var hz_material: ShaderMaterial = ShaderMaterial.new()
 	hz_material.shader = HZ_SHADER
-	hz_material.set_shader_parameter(&"color", Palette.color(&"hz_dim"))
 	hz_material.set_shader_parameter(&"edge_color", Palette.color(&"hz"))
 	hz_material.set_shader_parameter(&"flux_inner", 1.0 / pow(Astro.habitable_zone_inner(1.0), 2.0))
 	hz_material.set_shader_parameter(&"flux_outer", 1.0 / pow(Astro.habitable_zone_outer(1.0), 2.0))
@@ -361,14 +357,11 @@ func _draw_habitable_zone() -> void:
 	var count: int = stars.size()
 	stars.resize(HZ_MAX_STARS)
 	shine.resize(HZ_MAX_STARS)
-	# Close up, the band would cover the whole screen: let its fill fade out.
-	var band: float = (Astro.habitable_zone_outer(brightest) - Astro.habitable_zone_inner(brightest)) * camera.scale
 	var hz_material: ShaderMaterial = _hz.material as ShaderMaterial
 	hz_material.set_shader_parameter(&"star_count", count)
 	hz_material.set_shader_parameter(&"stars", stars)
 	hz_material.set_shader_parameter(&"luminosity", shine)
 	hz_material.set_shader_parameter(&"scale", camera.scale)
-	hz_material.set_shader_parameter(&"density", HZ_DENSITY * clampf(1.0 - (band - 400.0) / 1200.0, 0.0, 1.0))
 	_hz.draw_rect(view, Palette.color(&"white"))
 
 
