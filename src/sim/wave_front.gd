@@ -11,6 +11,10 @@ extends RefCounted
 enum Kind { LIGHT, GRAVITY }
 
 var kind: Kind = Kind.LIGHT
+## What it carries: a change of light, of gravity (mass), or both (a star
+## placed or removed changes both at once).
+var light: bool = true
+var gravity: bool = false
 var origin_x: float = 0.0
 var origin_y: float = 0.0
 var origin_z: float = 0.0
@@ -25,6 +29,8 @@ var label_key: String = ""
 static func create(front_kind: Kind, x: float, y: float, z: float, time: float) -> WaveFront:
 	var front: WaveFront = WaveFront.new()
 	front.kind = front_kind
+	front.light = front_kind == Kind.LIGHT
+	front.gravity = front_kind == Kind.GRAVITY
 	front.origin_x = x
 	front.origin_y = y
 	front.origin_z = z

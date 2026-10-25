@@ -16,7 +16,7 @@ extends RefCounted
 ## The array fields, in the order saves and snapshots store them.
 const ARRAY_FIELDS: Array[StringName] = [
 	&"pos", &"vel", &"acc", &"mass", &"radius", &"mode", &"parent", &"hill", &"rail",
-	&"delta_body", &"delta_front", &"delta_mass",
+	&"delta_body", &"delta_front", &"delta_mass", &"light_base", &"light_body", &"light_front", &"light_change",
 	&"front_origin", &"front_time", &"front_speed",
 	&"p_mode", &"p_primary", &"p_level", &"p_kind", &"p_elem", &"p_pos", &"p_vel", &"p_acc",
 	&"p_last", &"p_next", &"p_radius", &"p_tau",
@@ -66,6 +66,13 @@ var rail: PackedFloat64Array = []
 var delta_body: PackedInt32Array = []
 var delta_front: PackedInt32Array = []
 var delta_mass: PackedFloat64Array = []
+
+# Light: a star's brightness as seen by a receiver is light_base plus the
+# changes whose front has reached it (the kernel does not use these).
+var light_base: PackedFloat64Array = []
+var light_body: PackedInt32Array = []
+var light_front: PackedInt32Array = []
+var light_change: PackedFloat64Array = []
 
 # Fronts (geometry only; Simulation keeps what each one carries).
 var front_origin: PackedFloat64Array = []
@@ -121,6 +128,7 @@ func add_body(
 	mode.append(body_mode)
 	parent.append(parent_index)
 	hill.append(INF)
+	light_base.append(0.0)
 	var empty: PackedFloat64Array = PackedFloat64Array()
 	empty.resize(Gravity.ELEMENT_SIZE)
 	rail.append_array(empty)
@@ -194,6 +202,23 @@ func mass_felt_at(index: int, x: float, y: float, z: float, t: float) -> float:
 		var reach: float = (t - front_time[f]) * front_speed[f]
 		if is_inf(front_speed[f]) or reach * reach >= dx * dx + dy * dy + dz * dz:
 			felt += delta_mass[d]
+	return felt
+
+
+## Brightness (L☉) of a body as seen at a point at time t: its base plus the
+## changes whose front has arrived there.
+func light_felt_at(index: int, x: float, y: float, z: float, t: float) -> float:
+	var felt: float = light_base[index]
+	for d: int in light_body.size():
+		if light_body[d] != index:
+			continue
+		var f: int = light_front[d]
+		var dx: float = x - front_origin[f * 3]
+		var dy: float = y - front_origin[f * 3 + 1]
+		var dz: float = z - front_origin[f * 3 + 2]
+		var reach: float = (t - front_time[f]) * front_speed[f]
+		if is_inf(front_speed[f]) or reach * reach >= dx * dx + dy * dy + dz * dz:
+			felt += light_change[d]
 	return felt
 
 

@@ -52,7 +52,7 @@ func test_finished_fronts_are_dropped() -> void:
 	var system: StarSystem = (PresetLoader.load_file("res://data/presets/solar_system.json") as Dictionary)["system"]
 	var simulation: Simulation = Simulation.new(system, SimClock.load_default(0.0))
 	simulation.clock.use_preset("1")
-	simulation.fronts.append(WaveFront.create(WaveFront.Kind.GRAVITY, 0.0, 0.0, 0.0, 0.0))
+	simulation.emit_front(0.0, 0.0, 0.0, false, true, "FRONT_PLACED")
 	simulation.advance(1.0)
 	assert_eq(simulation.fronts.size(), 1, "still travelling after one second")
 	simulation.clock.use_preset("4")
