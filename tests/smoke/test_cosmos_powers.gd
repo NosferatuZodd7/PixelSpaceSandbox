@@ -337,3 +337,16 @@ func test_a_collision_flashes() -> void:
 	await wait_frames(30)
 	var feed: NotificationFeed = _screen.get_node("UI/Root/Notifications")
 	assert_eq(feed.texts().size(), 1, "falling debris is not announced: %s" % [feed.texts()])
+
+
+func test_many_impacts_on_one_body_make_one_notice() -> void:
+	var simulation: Simulation = _simulation()
+	var jupiter: int = _index(&"jupiter")
+	for k: int in 5:
+		simulation.events.append({"kind": "impact", "body": jupiter, "particle": 0, "time": simulation.clock.time})
+	await wait_frames(2)
+	var feed: NotificationFeed = _screen.get_node("UI/Root/Notifications")
+	assert_eq(feed.texts(), PackedStringArray(["5 small bodies struck Jupiter"]), "counted on one line")
+	simulation.events.append({"kind": "impact", "body": jupiter, "particle": 0, "time": simulation.clock.time})
+	await wait_frames(2)
+	assert_eq(feed.texts(), PackedStringArray(["6 small bodies struck Jupiter"]), "and kept up to date")

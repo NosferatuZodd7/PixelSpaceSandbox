@@ -16,9 +16,20 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## Adds a notice about a body (or -1).
-func push(text: String, body: int) -> void:
+## Adds a notice about a body (or -1). A notice with the same key, while
+## still shown, is updated instead (and shown afresh).
+func push(text: String, body: int, key: String = "") -> void:
+	if not key.is_empty():
+		for node: Node in get_children():
+			if node.get_meta(&"key", "") == key:
+				var shown: Button = node as Button
+				shown.text = text
+				shown.set_meta(&"age", 0.0)
+				shown.set_meta(&"count", count(key) + 1)
+				return
 	var entry: Button = Button.new()
+	entry.set_meta(&"key", key)
+	entry.set_meta(&"count", 1)
 	entry.text = text
 	entry.flat = true
 	entry.focus_mode = Control.FOCUS_NONE
@@ -34,6 +45,14 @@ func push(text: String, body: int) -> void:
 		var oldest: Node = get_child(0)
 		remove_child(oldest)
 		oldest.queue_free()
+
+
+## How many times a keyed notice still shown has been pushed (0 if none).
+func count(key: String) -> int:
+	for node: Node in get_children():
+		if node.get_meta(&"key", "") == key:
+			return int(node.get_meta(&"count", 1))
+	return 0
 
 
 func texts() -> PackedStringArray:

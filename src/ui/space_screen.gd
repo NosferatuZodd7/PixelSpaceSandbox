@@ -117,7 +117,11 @@ func _announce_events() -> void:
 				elif simulation.state.p_kind[particle] == Gravity.ParticleKind.COMET:
 					_notifications.push(Format.tr_units("NOTE_IMPACT_COMET", who), body)
 				else:
-					_notifications.push(Format.tr_units("NOTE_IMPACT", who), body)
+					# Many at once when a belt is stirred up: one line, counted.
+					var key: String = "impact_%d" % body
+					var hits: int = _notifications.count(key) + 1
+					var text: String = Format.tr_units("NOTE_IMPACT", who) if hits == 1 else tr("NOTE_IMPACTS") % [Format.number(hits), who]
+					_notifications.push(text, body, key)
 	simulation.events.clear()
 
 

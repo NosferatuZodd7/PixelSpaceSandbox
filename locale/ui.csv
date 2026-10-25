@@ -183,6 +183,7 @@ NOTE_TORN,%s was torn into a ring around %s,%s foi desfeito num anel à volta de
 NOTE_IMPACT_NAMED,%s struck %s,%s atingiu %s
 NOTE_IMPACT_COMET,A comet struck %s,Um cometa atingiu %s
 NOTE_IMPACT,A small body struck %s,Um pequeno corpo atingiu %s
+NOTE_IMPACTS,%s small bodies struck %s,%s pequenos corpos atingiram %s
 SNAPSHOT_AUTO,Snapshot,Fotografia
 SNAPSHOT_BEFORE,Before a change (Ctrl+Z goes back),Antes de uma mudança (Ctrl+Z volta atrás)
 TAB_COSMOS,Cosmos,Cosmos
