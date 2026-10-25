@@ -43,3 +43,14 @@ var approximate_phase: bool = false
 
 func is_star() -> bool:
 	return kind == Kind.STAR
+
+
+## A copy that can change without changing this one (orbit models are
+## shared: they never change).
+func copy() -> CelestialBody:
+	var other: CelestialBody = CelestialBody.new()
+	for property: Dictionary in get_property_list():
+		if property["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			var value: Variant = get(property["name"])
+			other.set(property["name"], value.duplicate(true) if value is Array else value)
+	return other

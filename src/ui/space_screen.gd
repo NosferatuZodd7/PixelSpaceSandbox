@@ -38,6 +38,7 @@ var _was_paused: bool = false
 @onready var _settings_panel: SettingsPanel = $UI/Root/Center/SettingsPanel
 @onready var _laws_panel: WorldLawsPanel = $UI/Root/Center/WorldLawsPanel
 @onready var _notifications: NotificationFeed = $UI/Root/Notifications
+@onready var _timeline_bar: TimelineBar = $UI/Root/TimelineBar
 
 
 func _ready() -> void:
@@ -52,6 +53,7 @@ func _ready() -> void:
 	if is_nan(t):
 		t = Units.years_from_unix(Time.get_unix_time_from_system())
 	simulation = Simulation.new(loaded["system"], SimClock.load_default(t))
+	simulation.timeline = Timeline.new()
 	_view.setup(simulation)
 	_view.selection_changed.connect(_on_selection_changed)
 	_powers.setup(simulation, _view)
@@ -60,6 +62,8 @@ func _ready() -> void:
 		set_overlay(overlay, _toolbar.overlays[overlay])
 	_toolbar.overlay_toggled.connect(set_overlay)
 	_toolbar.laws_requested.connect(func() -> void: _laws_panel.open(simulation))
+	_timeline_bar.simulation = simulation
+	_timeline_bar.rewound.connect(_after_restore)
 	_notifications.focus_requested.connect(func(body: int) -> void:
 		_view.select(body)
 		_view.follow(body))
@@ -82,6 +86,7 @@ func _process(delta: float) -> void:
 	if not _menu_open:
 		_steer_time(delta)
 		simulation.advance(delta)
+		simulation.timeline.tick(simulation, delta)
 	_time_controls.news_travelling = not simulation.fronts.is_empty()
 	_announce_events()
 	_update_status()
@@ -111,6 +116,14 @@ func _announce_events() -> void:
 				else:
 					_notifications.push(Format.tr_units("NOTE_IMPACT", who), body)
 	simulation.events.clear()
+
+
+## After going back in time: nothing travels any more, so smart time and
+## the power in use stop.
+func _after_restore() -> void:
+	set_smart_time(false)
+	_toolbar.cancel_power()
+	_counter.refresh()
 
 
 ## Shows or hides a layer of the view (from the Tools tab).
@@ -214,6 +227,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		jump_to_next_arrival()
 	elif event.is_action_pressed(&"smart_time"):
 		set_smart_time(not smart_time)
+	elif event.is_action_pressed(&"undo"):
+		if simulation.timeline.undo(simulation):
+			_after_restore()
 	elif event.is_action_pressed(&"speed_up", true):
 		clock.faster()
 		clock.paused = false

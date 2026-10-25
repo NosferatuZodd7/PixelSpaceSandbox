@@ -20,6 +20,7 @@
 		"true_scale": ["T"],
 		"next_arrival": ["N"],
 		"smart_time": ["G"],
+		"undo": ["Ctrl+Z"],
 		"toggle_ui": ["Tab"],
 		"zoom_in": ["PageUp"],
 		"zoom_out": ["PageDown"],

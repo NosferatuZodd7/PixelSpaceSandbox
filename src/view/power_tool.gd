@@ -71,6 +71,11 @@ func is_active() -> bool:
 func _process(_delta: float) -> void:
 	if is_active():
 		queue_redraw()
+	# Ruler ends on bodies a step back in time may have removed.
+	for end: Dictionary in _ruler_ends:
+		if end.has("body") and int(end["body"]) >= simulation.system.size():
+			_ruler_ends.clear()
+			break
 
 
 func _unhandled_input(event: InputEvent) -> void:

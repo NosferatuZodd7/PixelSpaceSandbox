@@ -69,3 +69,11 @@ func has_passed_all(system: StarSystem, t: float) -> bool:
 		if distance_to(system.x(i), system.y(i), system.z(i)) * 1.01 > radius:
 			return false
 	return true
+
+
+func copy() -> WaveFront:
+	var other: WaveFront = WaveFront.new()
+	for property: Dictionary in get_property_list():
+		if property["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			other.set(property["name"], get(property["name"]))
+	return other

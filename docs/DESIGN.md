@@ -301,6 +301,18 @@ out to keep it in view, time runs so it crosses half the view in 3 s
 or planet takes 1.5 s (`arrival_speed`), changing by at most ×8 per second
 (`ease_towards`).
 
+### Timeline
+
+`Simulation.snapshot()` keeps everything needed to come back to a moment
+exactly (the state, copies of the bodies, the travelling fronts, the world
+laws, the time); `restore()` puts it back (views start afresh, the
+would-be copy is dropped). `Timeline` takes one every 10 s of play while
+time runs and one before every change the player makes (labelled with it),
+keeps the newest 30, goes back to any of them (dropping the later ones)
+and undoes the last change (Ctrl+Z: back to the snapshot taken before it).
+Because steps never depend on frames, running again from a snapshot gives
+the same future to the last bit.
+
 ### Overlays and tools
 
 The Tools tab (entries in `data/powers.json` with tab "tools") switches

@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://src/view/overlay_view.gd" id="10_overlays"]
 [ext_resource type="Script" path="res://src/ui/world_laws_panel.gd" id="11_laws"]
 [ext_resource type="Script" path="res://src/ui/notification_feed.gd" id="12_notes"]
+[ext_resource type="Script" path="res://src/ui/timeline_bar.gd" id="13_timeline"]
 
 [node name="Space" type="Node"]
 script = ExtResource("1_space")
@@ -87,6 +88,21 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="TimelineBar" type="HBoxContainer" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 200.0
+offset_top = -60.0
+offset_right = -6.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("13_timeline")
 
 [node name="Toolbar" type="PanelContainer" parent="UI/Root"]
 layout_mode = 1

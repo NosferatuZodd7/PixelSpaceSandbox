@@ -293,3 +293,35 @@ func test_collisions_are_announced_and_can_be_followed() -> void:
 	await wait_frames(2)
 	assert_eq(_view.followed, earth, "clicking it follows the Earth")
 	assert_eq(_view.selected, earth)
+
+
+func test_undo_and_the_timeline_bar() -> void:
+	var simulation: Simulation = _simulation()
+	await _choose("sun_like_star")
+	_click(_empty_point())
+	await wait_frames(2)
+	assert_eq(simulation.system.size(), 34, "a star placed")
+	var bar: TimelineBar = _screen.get_node("UI/Root/TimelineBar")
+	assert_eq(bar.tick_count(), 1, "the timeline shows the snapshot taken before it")
+	var undo: InputEventKey = InputEventKey.new()
+	undo.keycode = KEY_Z
+	undo.ctrl_pressed = true
+	undo.pressed = true
+	tree.root.push_input(undo)
+	await wait_frames(2)
+	assert_eq(simulation.system.size(), 33, "Ctrl+Z takes it back")
+	assert_eq(_view.get_node("Bodies").get_child_count(), 33, "and the view drops its sprite")
+	assert_true(simulation.is_pristine(), "the Solar System is untouched again")
+	assert_eq(bar.tick_count(), 0, "the snapshot is used up")
+	simulation.clock.paused = false
+	simulation.timeline.record(simulation, Timeline.AUTO)
+	simulation.clock.use_preset("6")
+	await wait_frames(20)
+	simulation.timeline.record(simulation, Timeline.AUTO)
+	await wait_frames(2)
+	assert_eq(bar.tick_count(), 2)
+	var first: float = float(simulation.timeline.snapshots[0]["time"])
+	_click(bar.tick(0).get_global_rect().get_center())
+	await wait_frames(2)
+	assert_almost_eq(simulation.clock.time, first, 1e-9, "clicking a mark goes back to it")
+	assert_true(simulation.clock.paused, "and waits there")

@@ -97,7 +97,7 @@ func rows() -> Array[PackedStringArray]:
 func refresh() -> void:
 	if simulation == null or body_index < 0:
 		return
-	if not simulation.is_present(body_index):
+	if body_index >= simulation.system.size() or not simulation.is_present(body_index):
 		close_window()
 		return
 	var system: StarSystem = simulation.system

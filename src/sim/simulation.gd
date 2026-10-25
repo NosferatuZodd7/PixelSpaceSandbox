@@ -49,6 +49,11 @@ var alternative: NBodyState = null
 ## real and the would-be paths part.
 var alternative_front: WaveFront = null
 var _alternative_pending: bool = false
+## Snapshots taken before each change the player makes, when set.
+var timeline: Timeline = null
+## Counts the times the system was put back to a snapshot, so views know
+## to start afresh.
+var restores: int = 0
 ## World law: how fast changes travel (AU per year). INF makes every change
 ## felt at once everywhere (the classic sandbox).
 var light_speed: float = Units.C
@@ -149,12 +154,58 @@ func set_collisions(on: bool) -> void:
 func set_gravity_scale(scale: float) -> void:
 	if scale == state.g_scale:
 		return
+	_record("LAW_GRAVITY")
 	leave_pristine()
 	state.g_scale = scale
 	if alternative != null:
 		alternative.g_scale = scale
 		alternative.acc_valid = false
 	_after_change(-1)
+
+
+## Everything needed to come back to this moment exactly: the state, the
+## bodies, the travelling news, the world laws, the time. label_key says
+## why it was taken.
+func snapshot(label_key: String) -> Dictionary:
+	var bodies: Array[CelestialBody] = []
+	for b: CelestialBody in system.bodies:
+		bodies.append(b.copy())
+	var news: Array[WaveFront] = []
+	for front: WaveFront in fronts:
+		news.append(front.copy())
+	return {
+		"label_key": label_key, "time": clock.time, "state": state.copy(), "bodies": bodies,
+		"positions": system.positions.duplicate(), "velocities": system.velocities.duplicate(),
+		"fronts": news, "particle_names": particle_names.duplicate(), "light_speed": light_speed,
+	}
+
+
+## Puts the system back to a snapshot (which stays as it is, to be used again).
+func restore(snapshot: Dictionary) -> void:
+	state = (snapshot["state"] as NBodyState).copy()
+	system.bodies.clear()
+	for b: CelestialBody in snapshot["bodies"]:
+		system.bodies.append(b.copy())
+	system.positions = (snapshot["positions"] as PackedFloat64Array).duplicate()
+	system.velocities = (snapshot["velocities"] as PackedFloat64Array).duplicate()
+	fronts.clear()
+	for front: WaveFront in snapshot["fronts"]:
+		fronts.append(front.copy())
+	particle_names = (snapshot["particle_names"] as Dictionary[String, int]).duplicate()
+	light_speed = snapshot["light_speed"]
+	clock.time = snapshot["time"]
+	alternative = null
+	alternative_front = null
+	_alternative_pending = false
+	events.clear()
+	lagging = false
+	changes += 1
+	restores += 1
+	if not state.pristine:
+		_core.call(&"preview", state, clock.time)
+		_show_view()
+	elif state.particle_count() > 0:
+		_core.call(&"preview", state, clock.time)
 
 
 ## The particle of a named small body (a comet), or -1.
@@ -173,6 +224,7 @@ func is_present(index: int) -> bool:
 func place_body(
 	body: CelestialBody, x: float, y: float, z: float, vx: float, vy: float, vz: float, label_key: String
 ) -> int:
+	_record(label_key)
 	leave_pristine()
 	_keep_alternative()
 	var parent: int = dominant_body(x, y, z)
@@ -188,9 +240,10 @@ func place_body(
 ## Removes a body. Where the news has not arrived it keeps pulling, along
 ## its last path, as a ghost, and a star keeps shining there.
 func remove_body(index: int, label_key: String) -> void:
-	leave_pristine()
 	if not is_present(index):
 		return
+	_record(label_key)
+	leave_pristine()
 	_keep_alternative()
 	_free_from_rails(index)
 	var b: int = index * 3
@@ -220,9 +273,10 @@ func remove_body(index: int, label_key: String) -> void:
 ## old motion still pulls, as a ghost on the old path; the body keeps its
 ## index.
 func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> void:
-	leave_pristine()
 	if not is_present(index):
 		return
+	_record(label_key)
+	leave_pristine()
 	_keep_alternative()
 	_free_from_rails(index)
 	var b: int = index * 3
@@ -754,6 +808,12 @@ func _leave_ghost(index: int, front: int) -> int:
 	state.mass[index] = 0.0
 	state.light_base[index] = 0.0
 	return ghost
+
+
+## Before a change the player makes: a snapshot to come back to.
+func _record(label_key: String) -> void:
+	if timeline != null:
+		timeline.record(self, label_key)
 
 
 ## Before a change: keeps the system as it is, bodies only, when asked to.

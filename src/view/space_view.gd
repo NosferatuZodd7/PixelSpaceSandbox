@@ -84,6 +84,7 @@ var _comet_heads: Dictionary[int, Vector2] = {}
 ## per body (empty when it circles nothing).
 var _elements: Array[PackedFloat64Array] = []
 var _changes_seen: int = -1
+var _restores_seen: int = 0
 var _orbits_drawn: int = 0
 var _hz: Node2D
 var _orbits: Node2D
@@ -130,9 +131,21 @@ func follow(index: int) -> void:
 	followed = index
 
 
-## Adds what is needed to draw bodies added to the system since.
+## Adds what is needed to draw bodies added to the system since; after the
+## system went back to a snapshot, starts afresh.
 func _sync_bodies() -> void:
 	var system: StarSystem = simulation.system
+	if simulation.restores != _restores_seen:
+		_restores_seen = simulation.restores
+		for sprite: BodySprite in _sprites:
+			_bodies.remove_child(sprite)
+			sprite.queue_free()
+		_sprites.clear()
+		_path_times.fill(NAN)
+		if selected >= system.size():
+			select(-1)
+		if followed >= system.size():
+			followed = -1
 	var old: int = _sprites.size()
 	var count: int = system.size()
 	if count == old:
