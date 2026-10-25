@@ -27,6 +27,9 @@ var speed: float = Units.C
 var label_key: String = ""
 ## The body that changed, or -1.
 var body: int = -1
+## How far it must reach to have passed everything, as last measured: until
+## then there is no need to measure again.
+var needed_reach: float = 0.0
 
 
 static func create(front_kind: Kind, x: float, y: float, z: float, time: float) -> WaveFront:

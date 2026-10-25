@@ -918,9 +918,14 @@ func _front_passed_everything(f: int) -> bool:
 	if is_inf(speed):
 		return true
 	var reach: float = (clock.time - state.front_time[f]) * speed
+	# Measuring means a pass over every body and awake particle: done only
+	# once the front reaches as far as everything was the last time.
+	if reach < fronts[f].needed_reach:
+		return false
 	var ox: float = state.front_origin[f * 3]
 	var oy: float = state.front_origin[f * 3 + 1]
 	var oz: float = state.front_origin[f * 3 + 2]
+	var farthest: float = 0.0
 	for i: int in state.body_count():
 		if state.mode[i] == Gravity.Mode.GONE:
 			continue
@@ -928,8 +933,7 @@ func _front_passed_everything(f: int) -> bool:
 		var dx: float = state.view_pos[b] - ox
 		var dy: float = state.view_pos[b + 1] - oy
 		var dz: float = state.view_pos[b + 2] - oz
-		if sqrt(dx * dx + dy * dy + dz * dz) * 1.01 > reach:
-			return false
+		farthest = maxf(farthest, dx * dx + dy * dy + dz * dz)
 	# Asleep particles ride fixed conics and notice a change only when they
 	# are next checked, which the kernel schedules for when its news
 	# arrives; they need not hold a front back.
@@ -940,9 +944,9 @@ func _front_passed_everything(f: int) -> bool:
 		var dx: float = state.p_view[b] - ox
 		var dy: float = state.p_view[b + 1] - oy
 		var dz: float = state.p_view[b + 2] - oz
-		if sqrt(dx * dx + dy * dy + dz * dz) * 1.01 > reach:
-			return false
-	return true
+		farthest = maxf(farthest, dx * dx + dy * dy + dz * dz)
+	fronts[f].needed_reach = sqrt(farthest) * 1.01
+	return reach >= fronts[f].needed_reach
 
 
 func _fold_front(f: int) -> void:
