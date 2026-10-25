@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="6_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="7_settings"]
 [ext_resource type="Script" path="res://src/ui/time_controls.gd" id="8_time_controls"]
+[ext_resource type="Script" path="res://src/view/power_tool.gd" id="9_powers"]
 
 [node name="Space" type="Node"]
 script = ExtResource("1_space")
@@ -19,6 +20,9 @@ nebula_strength = 0.45
 
 [node name="View" type="Node2D" parent="."]
 script = ExtResource("3_view")
+
+[node name="Powers" type="Node2D" parent="."]
+script = ExtResource("9_powers")
 
 [node name="UI" type="CanvasLayer" parent="."]
 

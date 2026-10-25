@@ -67,3 +67,27 @@ func test_drifting_elements_stop_drifting_far_from_the_epoch() -> void:
 	assert_almost_eq(far["e"], 0.2 + 0.01 * KeplerOrbit.DRIFT_LIMIT_CENTURIES, 1e-12, "eccentricity frozen")
 	var state: PackedFloat64Array = orbit.state_at(1.0e9)
 	assert_false(is_nan(state[0]) or is_inf(state[0]), "still a valid position a billion years on")
+
+
+func test_conics_are_drawn_from_their_elements() -> void:
+	var mu: float = Units.G
+	# An ellipse: at 1 AU moving 20% faster than a circle, so 1 AU is periapsis.
+	var ellipse: PackedFloat64Array = Kepler.elements_from_state(1.0, 0.0, 0.0, 0.0, TAU * 1.2, 0.0, mu, 0.0)
+	var a: float = ellipse[0]
+	var e: float = ellipse[1]
+	var points: PackedFloat64Array = Kepler.conic_points(ellipse, 64, 100.0)
+	assert_eq(points.size(), 64 * 3, "64 points around a closed orbit")
+	assert_almost_eq(points[0], 1.0, 1e-9, "starting at periapsis")
+	for k: int in 64:
+		var r: float = Vector3(points[k * 3], points[k * 3 + 1], points[k * 3 + 2]).length()
+		assert_true(r > a * (1.0 - e) - 1e-6 and r < a * (1.0 + e) + 1e-6, "between periapsis and apoapsis")
+	# A hyperbola: twice the escape speed; drawn out to 10 AU.
+	var open: PackedFloat64Array = Kepler.elements_from_state(1.0, 0.0, 0.0, 0.0, TAU * sqrt(2.0) * 2.0, 0.0, mu, 0.0)
+	points = Kepler.conic_points(open, 33, 10.0)
+	assert_eq(points.size(), 33 * 3)
+	var last: Vector3 = Vector3(points[32 * 3], points[32 * 3 + 1], points[32 * 3 + 2])
+	var first: Vector3 = Vector3(points[0], points[1], points[2])
+	assert_almost_eq(last.length(), 10.0, 1e-4, "out to the given distance")
+	assert_almost_eq(first.length(), 10.0, 1e-4, "on both arms")
+	assert_true(last.y > 0.0 and first.y < 0.0, "from the incoming arm to the outgoing one")
+	assert_almost_eq(Vector3(points[16 * 3], points[16 * 3 + 1], points[16 * 3 + 2]).length(), 1.0, 1e-6, "through periapsis")

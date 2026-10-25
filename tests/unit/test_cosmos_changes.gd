@@ -153,3 +153,130 @@ func test_a_body_placed_with_the_circular_velocity_circles() -> void:
 		lowest = minf(lowest, d)
 		highest = maxf(highest, d)
 	assert_true(lowest > r * 0.9 and highest < r * 1.1, "stays about 90,000 km from the Earth for a whole orbit (%s–%s AU)" % [lowest, highest])
+
+
+static func _small_moon() -> CelestialBody:
+	var moon: CelestialBody = CelestialBody.new()
+	moon.id = &"new_moon"
+	moon.name_key = "BODY_NEW_MOON"
+	moon.kind = CelestialBody.Kind.MOON
+	moon.mass = 1e-12
+	moon.radius = Units.au_from_km(100.0)
+	return moon
+
+
+func test_integrated_bodies_keep_what_they_circle() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	simulation.leave_pristine()
+	var system: StarSystem = simulation.system
+	assert_eq(simulation.parent_of(system.index_of(&"earth")), system.index_of(&"sun"), "the Earth circles the Sun")
+	assert_eq(simulation.parent_of(system.index_of(&"moon")), system.index_of(&"earth"), "the Moon circles the Earth")
+	assert_eq(simulation.parent_of(0), -1, "the Sun circles nothing")
+	var elements: PackedFloat64Array = simulation.orbit_elements(system.index_of(&"mars"))
+	assert_almost_eq(elements[0], 1.524, 0.01, "Mars's orbit is 1.52 AU across")
+	assert_almost_eq(elements[1], 0.093, 0.005, "with its eccentricity")
+	assert_true(simulation.orbit_elements(0).is_empty(), "no orbit for the Sun")
+
+
+func test_a_placed_body_shows_its_orbit_at_once() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var system: StarSystem = simulation.system
+	var earth: int = system.index_of(&"earth")
+	var r: float = 0.0006
+	var x: float = system.x(earth) + r
+	var v: PackedFloat64Array = simulation.circular_velocity(x, system.y(earth), system.z(earth))
+	var moon: int = simulation.place_body(_small_moon(), x, system.y(earth), system.z(earth), v[0], v[1], v[2], "FRONT_PLACED")
+	assert_eq(simulation.parent_of(moon), earth, "it circles the Earth, even before time runs")
+	var elements: PackedFloat64Array = simulation.orbit_elements(moon)
+	assert_almost_eq(elements[0], r, r * 0.01, "on a 90,000 km orbit")
+	assert_true(elements[1] < 0.01, "a circle (e = %s)" % elements[1])
+
+
+func test_a_rogue_planet_flies_through_and_away() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var v: PackedFloat64Array = simulation.flyby_velocity(3.0, 0.0, 0.0, Units.au_from_km(20.0) * Units.YEAR_SECONDS)
+	var rogue: int = simulation.place_body(_small_moon(), 3.0, 0.0, 0.0, v[0], v[1], v[2], "FRONT_PLACED")
+	assert_eq(simulation.parent_of(rogue), 0, "the Sun bends its path")
+	var elements: PackedFloat64Array = simulation.orbit_elements(rogue)
+	assert_true(elements[0] < 0.0 and elements[1] > 1.0, "on an open path: it leaves again (a %s, e %s)" % [elements[0], elements[1]])
+	var periapsis: float = absf(elements[0]) * (elements[1] - 1.0)
+	assert_almost_eq(periapsis, 3.0, 0.01, "closest to the Sun where it was placed")
+
+
+func test_a_new_star_can_be_circled_at_once() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var star: int = simulation.place_body(_sun_like_star(), 0.0, 30.0, 0.0, 0.0, 0.0, 0.0, "FRONT_PLACED")
+	assert_eq(simulation.dominant_body(0.0, 30.05, 0.0), star, "close to the new star, before its news has spread")
+	var v: PackedFloat64Array = simulation.circular_velocity(0.0, 30.05, 0.0, 1e-6)
+	var dvx: float = v[0] - simulation.state.view_vel[star * 3]
+	var dvy: float = v[1] - simulation.state.view_vel[star * 3 + 1]
+	var speed: float = sqrt(dvx * dvx + dvy * dvy)
+	assert_almost_eq(speed, sqrt(Units.G * (1.0 + 1e-6) / 0.05), 1e-9, "the circular speed counts both masses")
+
+
+func test_two_stars_circle_each_other() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var v: PackedFloat64Array = simulation.circular_velocity(0.0, 3.0, 0.0, 1.0)
+	var star: int = simulation.place_body(_sun_like_star(), 0.0, 3.0, 0.0, v[0], v[1], v[2], "FRONT_PLACED")
+	assert_eq(simulation.parent_of(star), 0, "it circles the Sun")
+	var elements: PackedFloat64Array = simulation.orbit_elements(star)
+	assert_true(elements[1] < 0.01, "on a circle, both stars' masses counted (e = %s)" % elements[1])
+
+
+func test_starlight_arrives_from_every_star() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var e: PackedFloat64Array = _position(simulation, &"earth")
+	var d: float = Vector3(e[0], e[1], e[2]).length()
+	assert_almost_eq(simulation.flux_at(e[0], e[1], e[2]), 1.0 / (d * d), 1e-3, "sunlight at the Earth")
+	assert_eq(simulation.main_star_at(e[0], e[1], e[2]), 0, "from the Sun")
+	var star: int = simulation.place_body(_sun_like_star(), e[0] + 0.5, e[1], e[2], 0.0, 0.0, 0.0, "FRONT_PLACED")
+	assert_almost_eq(simulation.flux_at(e[0], e[1], e[2]), 1.0 / (d * d), 1e-3, "the new star's light has not arrived yet")
+	simulation.clock.paused = false
+	_run([simulation], 5.0, "2")
+	e = _position(simulation, &"earth")
+	assert_eq(simulation.main_star_at(e[0], e[1], e[2]), star, "four minutes later the close new star outshines the Sun")
+	assert_true(simulation.flux_at(e[0], e[1], e[2]) > 3.0, "the Earth gets far more light")
+	simulation.remove_body(0, "FRONT_REMOVED")
+	simulation.remove_body(star, "FRONT_REMOVED")
+	_run([simulation], 1.0, "4")
+	e = _position(simulation, &"earth")
+	assert_eq(simulation.flux_at(e[0], e[1], e[2]), 0.0, "darkness once both are gone")
+	assert_eq(simulation.main_star_at(e[0], e[1], e[2]), -1)
+	assert_eq(simulation.state.mode[star], Gravity.Mode.GONE, "the new star is gone")
+	assert_eq(simulation.state.mass[star], 0.0, "with all of its mass, though its arrival was still on its way")
+
+
+func test_a_body_flung_before_its_news_spread_keeps_all_of_it() -> void:
+	var simulation: Simulation = _simulation()
+	var star: int = simulation.place_body(_sun_like_star(), 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, "FRONT_PLACED")
+	# An hour later the Earth (2 to 4 AU away) has heard of the star, Neptune not yet.
+	_run([simulation], 60.0, "2")
+	simulation.fling(star, 1.0, 0.0, 0.0, "FRONT_FLUNG")
+	var ghost: int = simulation.state.body_count() - 1
+	var t: float = simulation.clock.time
+	var e: PackedFloat64Array = _position(simulation, &"earth")
+	assert_almost_eq(simulation.state.mass_felt_at(ghost, e[0], e[1], e[2], t), 1.0, 1e-12, "the Earth feels the star on its old path")
+	assert_almost_eq(simulation.state.mass_felt_at(star, e[0], e[1], e[2], t), 0.0, 1e-12, "not yet on its new one")
+	var n: PackedFloat64Array = _position(simulation, &"neptune")
+	assert_almost_eq(simulation.state.mass_felt_at(ghost, n[0], n[1], n[2], t), 0.0, 1e-12, "Neptune has not heard of the star at all")
+	assert_almost_eq(simulation.state.mass_felt_at(star, n[0], n[1], n[2], t), 0.0, 1e-12)
+	_run([simulation], 1.0, "4")
+	assert_true(simulation.fronts.is_empty(), "a day later all the news has spread")
+	assert_eq(simulation.state.mass[star], 1.0, "the flung star has its whole mass")
+	assert_eq(simulation.state.mode[ghost], Gravity.Mode.GONE, "its ghost is gone")
+	assert_eq(simulation.state.mass[ghost], 0.0)
+
+
+func test_the_moons_of_a_removed_planet_circle_its_star() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var system: StarSystem = simulation.system
+	simulation.remove_body(system.index_of(&"mars"), "FRONT_REMOVED")
+	assert_eq(simulation.parent_of(system.index_of(&"phobos")), 0, "Phobos now circles the Sun")
+	assert_eq(simulation.dominant_body(-2.0, 1.0, 0.0), 0, "and does not take over the inner system")

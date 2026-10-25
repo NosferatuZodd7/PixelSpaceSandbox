@@ -1,12 +1,16 @@
 class_name CelestialBody
 extends RefCounted
-## One star, planet, dwarf planet or moon: what it is and how it moves.
+## One star, planet, dwarf planet, moon or black hole: what it is and how
+## it moves.
 ## Units: masses in M☉, distances in AU, time in years.
 
-enum Kind { STAR, PLANET, DWARF_PLANET, MOON }
+enum Kind { STAR, PLANET, DWARF_PLANET, MOON, BLACK_HOLE }
 
 var id: StringName = &""
 var name_key: String = ""
+## For bodies the player adds: the name is name_key with this number
+## ("Star 2"); 0 for bodies named by name_key alone.
+var name_number: int = 0
 var kind: Kind = Kind.PLANET
 ## Index of the body it orbits in its StarSystem, or -1.
 var parent: int = -1

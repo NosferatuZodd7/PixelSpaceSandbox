@@ -3,7 +3,23 @@
 	"legend": {
 		"X": "ui_text",
 		"A": "ui_accent",
-		"D": "ui_text_dim"
+		"D": "ui_text_dim",
+		"y": "star_g",
+		"w": "white",
+		"r": "star_m",
+		"o": "star_k",
+		"b": "star_b",
+		"k": "void",
+		"c": "accretion",
+		"s": "sand",
+		"d": "desert",
+		"u": "ocean",
+		"g": "grass",
+		"m": "rock",
+		"n": "crater",
+		"p": "lava_dark",
+		"l": "space_indigo_light",
+		"x": "ui_danger"
 	},
 	"icons": {
 		"pause": [
@@ -41,6 +57,127 @@
 			".XX..XX",
 			"..X...X",
 			"......."
+		],
+		"power_star": [
+			"....y....",
+			".y..y..y.",
+			"..yyyyy..",
+			"..ywwwy..",
+			"yyywwwyyy",
+			"..ywwwy..",
+			"..yyyyy..",
+			".y..y..y.",
+			"....y...."
+		],
+		"power_red_dwarf": [
+			".........",
+			"....r....",
+			"..rrrrr..",
+			"..rooor..",
+			".rrooorr.",
+			"..rooor..",
+			"..rrrrr..",
+			"....r....",
+			"........."
+		],
+		"power_blue_giant": [
+			"...bbb...",
+			".bbbbbbb.",
+			".bbwwwbb.",
+			"bbwwwwwbb",
+			"bbwwwwwbb",
+			"bbwwwwwbb",
+			".bbwwwbb.",
+			".bbbbbbb.",
+			"...bbb..."
+		],
+		"power_white_dwarf": [
+			".........",
+			".........",
+			"....w....",
+			"...www...",
+			"..wwwww..",
+			"...www...",
+			"....w....",
+			".........",
+			"........."
+		],
+		"power_black_hole": [
+			"...ccc...",
+			"..ckkkc..",
+			".ckkkkkc.",
+			"ckkkkkkkc",
+			"ccccccccc",
+			"ckkkkkkkc",
+			".ckkkkkc.",
+			"..ckkkc..",
+			"...ccc..."
+		],
+		"power_gas_giant": [
+			"...sss...",
+			"..ddddd..",
+			".sssssss.",
+			".ddddddd.",
+			".sssssss.",
+			".ddddddd.",
+			".sssssss.",
+			"..ddddd..",
+			"...sss..."
+		],
+		"power_rocky_planet": [
+			"...uuu...",
+			"..uggguu.",
+			".ugggguuu",
+			".uugguugu",
+			".uuuugggu",
+			".ugguuggu",
+			".uggguuuu",
+			"..uuugu..",
+			"...uuu..."
+		],
+		"power_moon": [
+			".........",
+			"...mmm...",
+			"..mmnmm..",
+			".mmmmmnm.",
+			".mnmmmmm.",
+			".mmmmnmm.",
+			"..mmmmm..",
+			"...mmm...",
+			"........."
+		],
+		"power_rogue": [
+			".........",
+			".....ppp.",
+			"....ppppp",
+			"lll.ppppp",
+			"....ppppp",
+			"ll..ppppp",
+			".....ppp.",
+			"llll.....",
+			"........."
+		],
+		"power_fling": [
+			".........",
+			".........",
+			"......X..",
+			".......X.",
+			"XXXXXXXXX",
+			".......X.",
+			"......X..",
+			".........",
+			"........."
+		],
+		"power_delete": [
+			".........",
+			".x.....x.",
+			"..x...x..",
+			"...x.x...",
+			"....x....",
+			"...x.x...",
+			"..x...x..",
+			".x.....x.",
+			"........."
 		]
 	}
 }

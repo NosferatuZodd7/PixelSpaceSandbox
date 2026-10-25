@@ -2,6 +2,7 @@ class_name InspectWindow
 extends PanelContainer
 ## A window describing one body, with live values. Drag it by its title;
 ## pin it to keep it open while inspecting other bodies; close it with ×.
+## It closes by itself when its body is removed.
 
 signal closed(window: InspectWindow)
 signal pin_changed(window: InspectWindow)
@@ -13,6 +14,7 @@ const KIND_KEYS: Dictionary[CelestialBody.Kind, String] = {
 	CelestialBody.Kind.PLANET: "KIND_PLANET",
 	CelestialBody.Kind.DWARF_PLANET: "KIND_DWARF_PLANET",
 	CelestialBody.Kind.MOON: "KIND_MOON",
+	CelestialBody.Kind.BLACK_HOLE: "KIND_BLACK_HOLE",
 }
 
 var simulation: Simulation
@@ -95,10 +97,12 @@ func rows() -> Array[PackedStringArray]:
 func refresh() -> void:
 	if simulation == null or body_index < 0:
 		return
+	if not simulation.is_present(body_index):
+		close_window()
+		return
 	var system: StarSystem = simulation.system
 	var b: CelestialBody = system.body(body_index)
-	var t: float = simulation.clock.time
-	_title.text = tr(b.name_key).to_upper()
+	_title.text = Format.body_name(b).to_upper()
 	var values: Array[PackedStringArray] = []
 	values.append(_row("INSPECT_KIND", tr(KIND_KEYS[b.kind])))
 	if b.is_star():
@@ -110,28 +114,66 @@ func refresh() -> void:
 			Format.significant(Astro.habitable_zone_inner(b.luminosity), 3),
 			Format.distance(Astro.habitable_zone_outer(b.luminosity)),
 		]))
+		_add_orbit(values)
+	elif b.kind == CelestialBody.Kind.BLACK_HOLE:
+		values.append(_row("INSPECT_MASS", Format.tr_units("UNIT_SUNS", Format.significant(b.mass, 3))))
+		values.append(_row("INSPECT_RADIUS", Format.tr_units("UNIT_KM", Format.number(Units.km_from_au(b.radius), 1))))
+		_add_orbit(values)
 	else:
 		values.append(_row("INSPECT_MASS", _mass_text(b.mass)))
 		values.append(_row("INSPECT_RADIUS", Format.tr_units("UNIT_KM", Format.number(Units.km_from_au(b.radius)))))
 		values.append(_row("INSPECT_GRAVITY", Format.gravity(Astro.surface_gravity(b.mass, b.radius))))
-		var star: int = system.host_star(body_index)
-		var star_distance: float = system.distance(star, body_index)
-		values.append(_row("INSPECT_STAR_DISTANCE", Format.distance(star_distance)))
-		values.append(_row("INSPECT_LIGHT_TIME", Format.duration(Units.light_time_seconds(star_distance))))
-		if b.kind == CelestialBody.Kind.MOON:
-			values.append(_row("INSPECT_PARENT_DISTANCE", Format.distance(system.distance(b.parent, body_index))))
-		var elements: Dictionary = b.orbit.elements_at(t)
+		var x: float = system.x(body_index)
+		var y: float = system.y(body_index)
+		var z: float = system.z(body_index)
+		var star: int = simulation.main_star_at(x, y, z)
+		if star != -1:
+			var star_distance: float = system.distance(star, body_index)
+			values.append(_row("INSPECT_STAR_DISTANCE", Format.distance(star_distance)))
+			values.append(_row("INSPECT_LIGHT_TIME", Format.duration(Units.light_time_seconds(star_distance))))
+		var parent: int = simulation.parent_of(body_index)
+		if b.kind == CelestialBody.Kind.MOON and parent != -1:
+			values.append(_row("INSPECT_PARENT_DISTANCE", Format.distance(system.distance(parent, body_index))))
+		_add_orbit(values)
+		values.append(_row("INSPECT_ROTATION", _rotation_text(b.rotation_hours)))
+		values.append(_row("INSPECT_AXIAL_TILT", "%s°" % Format.significant(b.axial_tilt_deg, 3)))
+		# Starlight from every star whose light has arrived, as if from one
+		# star at 1 AU.
+		var flux: float = simulation.flux_at(x, y, z)
+		values.append(_row("INSPECT_TEMPERATURE", Format.temperature(Astro.equilibrium_temperature(flux, 1.0, b.albedo))))
+		values.append(_row("INSPECT_IN_HABITABLE_ZONE", tr("YES") if flux > 0.0 and Astro.in_habitable_zone(1.0, flux) else tr("NO")))
+		if b.approximate_phase and simulation.is_pristine():
+			values.append(_row("INSPECT_NOTE", tr("INSPECT_APPROXIMATE_PHASE")))
+	_fill(values)
+
+
+## What the body circles and its orbit: the real one while the system is
+## untouched, else the one it is on right now.
+func _add_orbit(values: Array[PackedStringArray]) -> void:
+	var system: StarSystem = simulation.system
+	var b: CelestialBody = system.body(body_index)
+	var parent: int = simulation.parent_of(body_index)
+	if parent == -1:
+		if not b.is_star():
+			values.append(_row("INSPECT_ORBITS", tr("INSPECT_NOTHING")))
+		return
+	values.append(_row("INSPECT_ORBITS", Format.body_name(system.body(parent))))
+	if simulation.is_pristine() and b.orbit != null:
+		var elements: Dictionary = b.orbit.elements_at(simulation.clock.time)
 		values.append(_row("INSPECT_SEMI_MAJOR_AXIS", Format.distance(float(elements["a"]))))
 		values.append(_row("INSPECT_ECCENTRICITY", Format.significant(float(elements["e"]), 3)))
 		values.append(_row("INSPECT_PERIOD", Format.duration(b.orbit.period_years() * Units.YEAR_SECONDS)))
-		values.append(_row("INSPECT_ROTATION", _rotation_text(b.rotation_hours)))
-		values.append(_row("INSPECT_AXIAL_TILT", "%s°" % Format.significant(b.axial_tilt_deg, 3)))
-		var luminosity: float = system.body(star).luminosity
-		values.append(_row("INSPECT_TEMPERATURE", Format.temperature(Astro.equilibrium_temperature(luminosity, star_distance, b.albedo))))
-		values.append(_row("INSPECT_IN_HABITABLE_ZONE", tr("YES") if Astro.in_habitable_zone(star_distance, luminosity) else tr("NO")))
-		if b.approximate_phase:
-			values.append(_row("INSPECT_NOTE", tr("INSPECT_APPROXIMATE_PHASE")))
-	_fill(values)
+		return
+	var orbit: PackedFloat64Array = simulation.orbit_elements(body_index)
+	if orbit.is_empty():
+		return
+	if orbit[0] > 0.0:
+		values.append(_row("INSPECT_SEMI_MAJOR_AXIS", Format.distance(orbit[0])))
+		values.append(_row("INSPECT_ECCENTRICITY", Format.significant(orbit[1], 3)))
+		values.append(_row("INSPECT_PERIOD", Format.duration(TAU / orbit[2] * Units.YEAR_SECONDS)))
+	else:
+		values.append(_row("INSPECT_ECCENTRICITY", Format.significant(orbit[1], 3)))
+		values.append(_row("INSPECT_PERIOD", tr("INSPECT_PASSING")))
 
 
 func _row(label_key: String, value: String) -> PackedStringArray:

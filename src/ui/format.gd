@@ -101,6 +101,14 @@ static func _tidy(value: float) -> String:
 	return text
 
 
+## A body's name in the interface language: "Sun", or for a body the
+## player added, its kind and number ("Star 2").
+static func body_name(b: CelestialBody) -> String:
+	if b.name_number == 0:
+		return String(TranslationServer.translate(b.name_key))
+	return tr_units(b.name_key, str(b.name_number))
+
+
 ## A translated unit pattern ("%s days") filled with a number.
 static func tr_units(key: String, value: String) -> String:
 	return String(TranslationServer.translate(key)).replace("%s", value)

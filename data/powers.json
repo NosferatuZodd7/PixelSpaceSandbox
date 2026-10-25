@@ -1,0 +1,178 @@
+{
+	"notes": "God powers, shown as icon buttons in their toolbar tab. 'place' powers add a body: values are typical for that kind of object (the Sun's are real); a click puts it on a circular orbit around whatever dominates there, a drag throws it. A power with flyby_kms sweeps through instead: closest to its star at the click point, leaving at flyby_kms once far away. 'fling' throws an existing body, 'delete' removes one. Every change spreads at the speed of light.",
+	"powers": [
+		{
+			"id": "sun_like_star",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_star",
+			"name_key": "POWER_SUN_LIKE_STAR",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "star",
+				"mass_suns": 1.0,
+				"radius_km": 695700,
+				"luminosity_lsun": 1.0,
+				"temperature_k": 5772,
+				"rotation_hours": 609.1,
+				"look": "sun",
+				"name_key": "PLACED_STAR"
+			}
+		},
+		{
+			"id": "red_dwarf",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_red_dwarf",
+			"name_key": "POWER_RED_DWARF",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "star",
+				"mass_suns": 0.2,
+				"radius_km": 150000,
+				"luminosity_lsun": 0.005,
+				"temperature_k": 3200,
+				"rotation_hours": 1000,
+				"look": "star_red",
+				"name_key": "PLACED_STAR"
+			}
+		},
+		{
+			"id": "blue_giant",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_blue_giant",
+			"name_key": "POWER_BLUE_GIANT",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "star",
+				"mass_suns": 8.0,
+				"radius_km": 2800000,
+				"luminosity_lsun": 3000,
+				"temperature_k": 20000,
+				"rotation_hours": 30,
+				"look": "star_blue",
+				"name_key": "PLACED_STAR"
+			}
+		},
+		{
+			"id": "white_dwarf",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_white_dwarf",
+			"name_key": "POWER_WHITE_DWARF",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "star",
+				"mass_suns": 0.6,
+				"radius_km": 8700,
+				"luminosity_lsun": 0.003,
+				"temperature_k": 10000,
+				"rotation_hours": 3,
+				"look": "star_white",
+				"name_key": "PLACED_STAR"
+			}
+		},
+		{
+			"id": "black_hole",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_black_hole",
+			"name_key": "POWER_BLACK_HOLE",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "black_hole",
+				"mass_suns": 10.0,
+				"radius_km": 29.5,
+				"rotation_hours": 0,
+				"look": "black_hole",
+				"name_key": "PLACED_BLACK_HOLE"
+			}
+		},
+		{
+			"id": "gas_giant",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_gas_giant",
+			"name_key": "POWER_GAS_GIANT",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "planet",
+				"mass_earths": 317.8,
+				"radius_km": 69911,
+				"rotation_hours": 9.9,
+				"albedo": 0.5,
+				"look": "placed_gas",
+				"name_key": "PLACED_PLANET"
+			}
+		},
+		{
+			"id": "rocky_planet",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_rocky_planet",
+			"name_key": "POWER_ROCKY_PLANET",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "planet",
+				"mass_earths": 1.0,
+				"radius_km": 6371,
+				"rotation_hours": 24,
+				"albedo": 0.3,
+				"look": "placed_rocky",
+				"name_key": "PLACED_PLANET"
+			}
+		},
+		{
+			"id": "moon",
+			"tab": "cosmos",
+			"action": "place",
+			"icon": "power_moon",
+			"name_key": "POWER_MOON",
+			"hint_key": "POWER_PLACE_HINT",
+			"body": {
+				"kind": "moon",
+				"mass_earths": 0.0123,
+				"radius_km": 1737,
+				"rotation_hours": 655.7,
+				"albedo": 0.12,
+				"look": "moon",
+				"name_key": "PLACED_MOON"
+			}
+		},
+		{
+			"id": "rogue_planet",
+			"tab": "cosmos",
+			"action": "place",
+			"flyby_kms": 20,
+			"icon": "power_rogue",
+			"name_key": "POWER_ROGUE_PLANET",
+			"hint_key": "POWER_ROGUE_HINT",
+			"body": {
+				"kind": "planet",
+				"mass_earths": 317.8,
+				"radius_km": 69911,
+				"rotation_hours": 12,
+				"albedo": 0.1,
+				"look": "rogue",
+				"name_key": "PLACED_ROGUE"
+			}
+		},
+		{
+			"id": "fling",
+			"tab": "cosmos",
+			"action": "fling",
+			"icon": "power_fling",
+			"name_key": "POWER_FLING",
+			"hint_key": "POWER_FLING_HINT"
+		},
+		{
+			"id": "delete",
+			"tab": "cosmos",
+			"action": "delete",
+			"icon": "power_delete",
+			"name_key": "POWER_DELETE",
+			"hint_key": "POWER_DELETE_HINT"
+		}
+	]
+}

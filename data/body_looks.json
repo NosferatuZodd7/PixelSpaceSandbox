@@ -27,6 +27,16 @@
 		"triton": { "style": "icy", "colors": ["sand", "snow", "white"], "cracks": "star_m" },
 		"pluto": { "style": "rocky", "colors": ["lava_dark", "dust", "sand", "snow"], "craters": 0.2, "ice": "white" },
 		"charon": { "style": "rocky", "colors": ["rock", "regolith", "mountain"], "craters": 0.4, "ice": "lava_dark" },
-		"eris": { "style": "icy", "colors": ["ice", "snow", "white"], "cracks": "mountain" }
+		"eris": { "style": "icy", "colors": ["ice", "snow", "white"], "cracks": "mountain" },
+		"star_red": { "style": "star", "colors": ["star_red_giant", "star_m", "star_k", "star_g"] },
+		"star_blue": { "style": "star", "colors": ["star_b", "star_a", "white", "white"] },
+		"star_white": { "style": "star", "colors": ["star_a", "white", "white", "white"] },
+		"black_hole": { "style": "star", "colors": ["void", "void", "void", "void"] },
+		"placed_gas": { "style": "banded", "colors": ["star_m", "desert", "sand", "star_g"], "bands": 8, "spot": "lava" },
+		"placed_rocky": {
+			"style": "terran", "colors": ["ocean_deep", "ocean"],
+			"land": ["sand", "grass", "forest", "mountain"], "ice": "snow", "clouds": "white", "land_share": 0.45
+		},
+		"rogue": { "style": "banded", "colors": ["void", "space_navy", "space_indigo", "nebula_1"], "bands": 6 }
 	}
 }

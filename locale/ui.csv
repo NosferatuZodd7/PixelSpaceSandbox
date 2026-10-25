@@ -55,6 +55,7 @@ KIND_STAR,Star,Estrela
 KIND_PLANET,Planet,Planeta
 KIND_DWARF_PLANET,Dwarf planet,Planeta anão
 KIND_MOON,Moon,Lua
+KIND_BLACK_HOLE,Black hole,Buraco negro
 INSPECT_KIND,Type,Tipo
 INSPECT_MASS,Mass,Massa
 INSPECT_RADIUS,Radius,Raio
@@ -76,6 +77,9 @@ INSPECT_APPROXIMATE_PHASE,approx. position,posição aproximada
 INSPECT_RETROGRADE,"%s, retrograde","%s, retrógrada"
 INSPECT_PIN,Pin,Fixar
 INSPECT_PINNED,Pinned,Fixa
+INSPECT_ORBITS,Orbits,Orbita
+INSPECT_NOTHING,nothing,nada
+INSPECT_PASSING,"passing through, not bound","de passagem, não ligado"
 YES,Yes,Sim
 NO,No,Não
 UNIT_KM,%s km,%s km
@@ -125,6 +129,30 @@ TAB_DISASTERS,Disasters,Desastres
 TAB_TOOLS,Tools,Ferramentas
 TAB_INSPECT,Inspect,Inspecionar
 TAB_COMING,These powers arrive in milestone %s.,Estes poderes chegam no marco %s.
+TAB_COSMOS_HINT,Pick a power to shape the system,Escolhe um poder para moldar o sistema
 TAB_INSPECT_HINT,Click a body to inspect it · double-click or F to follow it,Clica num corpo para o inspecionar · duplo clique ou F para o seguir
+POWER_SUN_LIKE_STAR,Sun-like star,Estrela como o Sol
+POWER_RED_DWARF,Red dwarf,Anã vermelha
+POWER_BLUE_GIANT,Blue giant,Gigante azul
+POWER_WHITE_DWARF,White dwarf,Anã branca
+POWER_BLACK_HOLE,Black hole,Buraco negro
+POWER_GAS_GIANT,Gas giant,Gigante gasoso
+POWER_ROCKY_PLANET,Rocky planet,Planeta rochoso
+POWER_MOON,Moon,Lua
+POWER_ROGUE_PLANET,Rogue planet,Planeta errante
+POWER_FLING,Fling,Atirar
+POWER_DELETE,Delete,Apagar
+POWER_PLACE_HINT,Click: circular orbit · drag: throw · right click: cancel,Clica: órbita circular · arrasta: lança · botão direito: cancela
+POWER_ROGUE_HINT,Click: it sweeps through here · drag: aim · right click: cancel,Clica: passa por aqui · arrasta: aponta · botão direito: cancela
+POWER_FLING_HINT,Drag a body to throw it · right click: cancel,Arrasta um corpo para o atirar · botão direito: cancela
+POWER_DELETE_HINT,Click a body to remove it · right click: cancel,Clica num corpo para o apagar · botão direito: cancela
+PLACED_STAR,Star %s,Estrela %s
+PLACED_BLACK_HOLE,Black hole %s,Buraco negro %s
+PLACED_PLANET,Planet %s,Planeta %s
+PLACED_MOON,Moon %s,Lua %s
+PLACED_ROGUE,Rogue %s,Errante %s
+FRONT_PLACED,%s appeared,%s apareceu
+FRONT_REMOVED,%s vanished,%s desapareceu
+FRONT_FLUNG,%s changed course,%s mudou de rumo
 VIEW_FOLLOWING,Following %s,A seguir: %s
 VIEW_TRUE_SCALE,TRUE SCALE,ESCALA REAL

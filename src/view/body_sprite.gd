@@ -2,7 +2,7 @@ class_name BodySprite
 extends Node2D
 ## Draws one body: its spinning, lit pixel disc; a dithered glow for stars;
 ## and dithered rings, the far half behind the disc and the near half in
-## front of it.
+## front of it (for a black hole, its accretion ring).
 
 const DISC_SHADER: Shader = preload("res://assets/shaders/planet_disc.gdshader")
 const RING_SHADER: Shader = preload("res://assets/shaders/dither_ring.gdshader")
@@ -43,13 +43,21 @@ func setup(body: CelestialBody, body_index: int, map_seed: int) -> void:
 	_disc = ShaderMaterial.new()
 	_disc.shader = DISC_SHADER
 	_disc.set_shader_parameter(&"night_color", Palette.color(&"void"))
-	_disc.set_shader_parameter(&"lit", not body.is_star())
+	_disc.set_shader_parameter(&"lit", not body.is_star() and body.kind != CelestialBody.Kind.BLACK_HOLE)
 	material = _disc
 	if body.is_star():
 		_glow = _ring_node(Palette.color(star_color_id(body.temperature)), true)
-	if not body.rings.is_empty():
+	var rings: Array[Dictionary] = body.rings
+	if body.kind == CelestialBody.Kind.BLACK_HOLE:
+		# A thin bright accretion ring around the dark disc, seen nearly edge-on.
+		rings = [{"inner": body.radius * 1.5, "outer": body.radius * 2.5, "color": &"accretion", "density": 1.0}]
+		_ring_rotation = -0.3
+		_ring_flatten = 0.35
+		_ring_front = 1
+	elif not rings.is_empty():
 		_orient_rings()
-		for ring: Dictionary in body.rings:
+	if not rings.is_empty():
+		for ring: Dictionary in rings:
 			var color: Color = Palette.color(ring["color"])
 			var back: Node2D = _ring_node(color, true)
 			back.set_meta(&"ring", ring)

@@ -28,6 +28,9 @@ var max_usec_per_frame: int = 6000
 ## True when the last frame ran out of budget (the game runs slower than
 ## the chosen speed).
 var lagging: bool = false
+## Counts the changes made to the system (places, removals, flings), so
+## views know when to redraw what they cache.
+var changes: int = 0
 ## World law: how fast changes travel (AU per year). INF makes every change
 ## felt at once everywhere (the classic sandbox).
 var light_speed: float = Units.C
@@ -66,6 +69,10 @@ func leave_pristine() -> void:
 	system.place_on_orbits(clock.time)
 	_copy_rails_into_state()
 	var count: int = state.body_count()
+	# Each body keeps circling what it circled (the kernel reviews this
+	# before its first step; until then it is what the screen shows).
+	for i: int in count:
+		state.hill[i] = _hill_radius(i)
 	var total_mass: float = 0.0
 	# 64-bit sums (Vector3 is 32-bit).
 	var momentum: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0])
@@ -77,7 +84,6 @@ func leave_pristine() -> void:
 		for k: int in 3:
 			state.vel[i * 3 + k] -= momentum[k] / total_mass
 		state.mode[i] = Gravity.Mode.FREE
-		state.parent[i] = -1
 	state.pristine = false
 	state.level = -1
 	state.acc_valid = false
@@ -116,9 +122,10 @@ func place_body(
 	body: CelestialBody, x: float, y: float, z: float, vx: float, vy: float, vz: float, label_key: String
 ) -> int:
 	leave_pristine()
+	var parent: int = dominant_body(x, y, z)
 	var index: int = system.add(body)
-	state.add_body(x, y, z, vx, vy, vz, 0.0, body.radius, Gravity.Mode.FREE, -1)
-	var front: int = emit_front(x, y, z, body.luminosity > 0.0, true, label_key)
+	state.add_body(x, y, z, vx, vy, vz, 0.0, body.radius, Gravity.Mode.FREE, parent)
+	var front: int = emit_front(x, y, z, body.luminosity > 0.0, true, label_key, index)
 	_change_mass(index, front, body.mass)
 	_change_light(index, front, body.luminosity)
 	_after_change(front)
@@ -133,17 +140,25 @@ func remove_body(index: int, label_key: String) -> void:
 		return
 	_free_from_rails(index)
 	var b: int = index * 3
-	var front: int = emit_front(
-		state.pos[b], state.pos[b + 1], state.pos[b + 2], state.light_base[index] > 0.0, true, label_key
-	)
-	state.mode[index] = Gravity.Mode.GHOST
-	_change_mass(index, front, -state.mass[index])
-	_change_light(index, front, -state.light_base[index])
+	var light: float = state.final_light(index)
+	var front: int = emit_front(state.pos[b], state.pos[b + 1], state.pos[b + 2], light > 0.0, true, label_key, index)
 	if front < 0:
 		state.mode[index] = Gravity.Mode.GONE
+		_forget_changes(index)
+		state.mass[index] = 0.0
+		state.light_base[index] = 0.0
+	else:
+		# All of it goes, including any arrival of its own still on its way.
+		state.mode[index] = Gravity.Mode.GHOST
+		_change_mass(index, front, -state.final_mass(index))
+		_change_light(index, front, -light)
+	# Its moons now circle what it circled (the kernel reviews this before
+	# its next step; until then it is what the screen shows).
 	for child: int in state.body_count():
-		if state.mode[child] == Gravity.Mode.RAILS and state.parent[child] == index:
-			state.mode[child] = Gravity.Mode.FREE
+		if state.parent[child] == index:
+			state.parent[child] = state.parent[index]
+			if state.mode[child] == Gravity.Mode.RAILS:
+				state.mode[child] = Gravity.Mode.FREE
 	_after_change(front)
 
 
@@ -156,25 +171,37 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 		return
 	_free_from_rails(index)
 	var b: int = index * 3
-	var front: int = emit_front(state.pos[b], state.pos[b + 1], state.pos[b + 2], false, true, label_key)
+	var mass: float = state.final_mass(index)
+	var light: float = state.final_light(index)
+	var front: int = emit_front(state.pos[b], state.pos[b + 1], state.pos[b + 2], light > 0.0, true, label_key, index)
 	if front >= 0:
 		var original: CelestialBody = system.body(index)
 		var ghost_body: CelestialBody = CelestialBody.new()
 		ghost_body.id = StringName("%s_ghost_%d" % [original.id, state.body_count()])
 		ghost_body.name_key = original.name_key
+		ghost_body.name_number = original.name_number
 		ghost_body.kind = original.kind
 		ghost_body.mass = original.mass
 		ghost_body.radius = original.radius
+		ghost_body.luminosity = original.luminosity
+		ghost_body.temperature = original.temperature
 		ghost_body.look = original.look
 		var ghost: int = system.add(ghost_body)
 		state.add_body(
 			state.pos[b], state.pos[b + 1], state.pos[b + 2], state.vel[b], state.vel[b + 1], state.vel[b + 2],
 			state.mass[index], state.radius[index], Gravity.Mode.GHOST, -1
 		)
-		_change_mass(ghost, front, -state.mass[index])
-		var mass: float = state.mass[index]
+		state.light_base[ghost] = state.light_base[index]
+		# The ghost is the body on its old path, as the far side of the system
+		# still knows it: with its changes still on their way, until the news
+		# that it changed course arrives.
+		_move_changes(index, ghost)
+		_change_mass(ghost, front, -mass)
+		_change_light(ghost, front, -light)
 		state.mass[index] = 0.0
+		state.light_base[index] = 0.0
 		_change_mass(index, front, mass)
+		_change_light(index, front, light)
 	state.vel[b] = vx
 	state.vel[b + 1] = vy
 	state.vel[b + 2] = vz
@@ -188,7 +215,8 @@ func dominant_body(x: float, y: float, z: float) -> int:
 	var best_hill: float = INF
 	var best_pull: float = 0.0
 	for j: int in state.body_count():
-		if not is_present(j) or state.mass[j] <= 0.0:
+		var mass: float = state.final_mass(j)
+		if not is_present(j) or mass <= 0.0:
 			continue
 		var b: int = j * 3
 		var dx: float = x - state.view_pos[b]
@@ -200,15 +228,16 @@ func dominant_body(x: float, y: float, z: float) -> int:
 			if d2 < hill * hill and hill < best_hill:
 				best = j
 				best_hill = hill
-		elif best_hill == INF and state.mass[j] / maxf(d2, 1e-300) > best_pull:
+		elif best_hill == INF and mass / maxf(d2, 1e-300) > best_pull:
 			best = j
-			best_pull = state.mass[j] / maxf(d2, 1e-300)
+			best_pull = mass / maxf(d2, 1e-300)
 	return best
 
 
 ## The velocity (AU/yr) of a circular orbit through a point around the body
-## that dominates there, prograde in the ecliptic plane.
-func circular_velocity(x: float, y: float, z: float) -> PackedFloat64Array:
+## that dominates there, prograde in the ecliptic plane, for a body of this
+## mass (M☉).
+func circular_velocity(x: float, y: float, z: float, mass: float = 0.0) -> PackedFloat64Array:
 	var j: int = dominant_body(x, y, z)
 	if j < 0:
 		return PackedFloat64Array([0.0, 0.0, 0.0])
@@ -218,10 +247,58 @@ func circular_velocity(x: float, y: float, z: float) -> PackedFloat64Array:
 	var r: float = sqrt(rx * rx + ry * ry)
 	if r <= 0.0:
 		return state.view_vel.slice(b, b + 3)
-	var speed: float = sqrt(Units.G * state.g_scale * state.mass[j] / r)
+	var speed: float = sqrt(Units.G * state.g_scale * (state.final_mass(j) + mass) / r)
 	return PackedFloat64Array([
 		state.view_vel[b] - speed * ry / r, state.view_vel[b + 1] + speed * rx / r, state.view_vel[b + 2],
 	])
+
+
+## The velocity (AU/yr) of a body sweeping through a point on its way
+## across the system: it passes closest to the star it falls towards there,
+## prograde, and leaves at speed_far (AU/yr) once far away.
+func flyby_velocity(x: float, y: float, z: float, speed_far: float) -> PackedFloat64Array:
+	var j: int = dominant_body(x, y, z)
+	while j >= 0 and parent_of(j) >= 0:
+		j = parent_of(j)
+	if j < 0:
+		return PackedFloat64Array([0.0, speed_far, 0.0])
+	var b: int = j * 3
+	var rx: float = x - state.view_pos[b]
+	var ry: float = y - state.view_pos[b + 1]
+	var rz: float = z - state.view_pos[b + 2]
+	var r: float = sqrt(rx * rx + ry * ry)
+	if r <= 0.0:
+		return PackedFloat64Array([0.0, speed_far, 0.0])
+	var escape_squared: float = 2.0 * Units.G * state.g_scale * state.final_mass(j) / sqrt(r * r + rz * rz)
+	var speed: float = sqrt(speed_far * speed_far + escape_squared)
+	return PackedFloat64Array([
+		state.view_vel[b] - speed * ry / r, state.view_vel[b + 1] + speed * rx / r, state.view_vel[b + 2],
+	])
+
+
+## The body a body circles now, or -1: its parent while the system is
+## untouched; once integrated, the one whose Hill sphere it is in (else the
+## one pulling hardest), as the kernel last reviewed it.
+func parent_of(index: int) -> int:
+	return state.parent[index]
+
+
+## A body's orbit around what it circles, as it is at the shown moment: a
+## Kepler element set (see Kepler.elements_from_state), or empty when it
+## circles nothing.
+func orbit_elements(index: int) -> PackedFloat64Array:
+	var p: int = parent_of(index)
+	if p < 0 or not is_present(index):
+		return PackedFloat64Array()
+	var b: int = index * 3
+	var q: int = p * 3
+	var view: PackedFloat64Array = state.view_pos
+	var view_vel: PackedFloat64Array = state.view_vel
+	return Kepler.elements_from_state(
+		view[b] - view[q], view[b + 1] - view[q + 1], view[b + 2] - view[q + 2],
+		view_vel[b] - view_vel[q], view_vel[b + 1] - view_vel[q + 1], view_vel[b + 2] - view_vel[q + 2],
+		Units.G * state.g_scale * (state.final_mass(p) + state.final_mass(index)), clock.time
+	)
 
 
 ## Where a small body starting at a point with a velocity would go over a
@@ -250,10 +327,35 @@ func felt_luminosity(index: int, x: float, y: float, z: float) -> float:
 	return state.light_felt_at(index, x, y, z, clock.time)
 
 
+## The starlight arriving at a point now, in L☉ per AU² (about 1 at the
+## Earth): every star counts once its light has got there.
+func flux_at(x: float, y: float, z: float) -> float:
+	var total: float = 0.0
+	for i: int in system.size():
+		if system.body(i).is_star():
+			total += _starlight(i, x, y, z)
+	return total
+
+
+## The star lighting a point the most now, or -1 in the dark.
+func main_star_at(x: float, y: float, z: float) -> int:
+	var best: int = -1
+	var best_light: float = 0.0
+	for i: int in system.size():
+		if system.body(i).is_star():
+			var light: float = _starlight(i, x, y, z)
+			if light > best_light:
+				best = i
+				best_light = light
+	return best
+
+
 ## Starts a front at a point at the committed moment, carrying a change of
-## light, of gravity or both. Returns its index, or -1 when changes are
-## felt at once (the "instant" world law).
-func emit_front(x: float, y: float, z: float, carries_light: bool, carries_gravity: bool, label_key: String) -> int:
+## light, of gravity or both, about a body (or -1). Returns its index, or -1
+## when changes are felt at once (the "instant" world law).
+func emit_front(
+	x: float, y: float, z: float, carries_light: bool, carries_gravity: bool, label_key: String, body: int = -1
+) -> int:
 	if is_inf(light_speed):
 		return -1
 	if fronts.size() >= Gravity.MAX_FRONTS:
@@ -266,6 +368,7 @@ func emit_front(x: float, y: float, z: float, carries_light: bool, carries_gravi
 	front.gravity = carries_gravity
 	front.speed = light_speed
 	front.label_key = label_key
+	front.body = body
 	fronts.append(front)
 	return fronts.size() - 1
 
@@ -288,15 +391,31 @@ func set_time(t: float) -> void:
 	_update_fronts()
 
 
-## A body's Hill sphere: from the kernel once integrated, else from its
-## preset orbit around its parent (INF at the top).
+## A body's Hill sphere around what it circles (INF at the top), from the
+## masses everyone will feel once the news has spread: placing and
+## circling bodies should not wait for the light.
 func _hill_radius(index: int) -> float:
-	if not state.pristine:
-		return state.hill[index]
-	var parent: int = system.body(index).parent
+	var parent: int = parent_of(index)
 	if parent < 0:
 		return INF
-	return system.distance(index, parent) * pow(state.mass[index] / (3.0 * state.mass[parent]), 1.0 / 3.0)
+	var b: int = index * 3
+	var q: int = parent * 3
+	var dx: float = state.view_pos[b] - state.view_pos[q]
+	var dy: float = state.view_pos[b + 1] - state.view_pos[q + 1]
+	var dz: float = state.view_pos[b + 2] - state.view_pos[q + 2]
+	var parent_mass: float = state.final_mass(parent)
+	if parent_mass <= 0.0:
+		return INF
+	var share: float = state.final_mass(index) / (3.0 * parent_mass)
+	return sqrt(dx * dx + dy * dy + dz * dz) * pow(share, 1.0 / 3.0)
+
+
+func _starlight(star: int, x: float, y: float, z: float) -> float:
+	var b: int = star * 3
+	var dx: float = x - state.view_pos[b]
+	var dy: float = y - state.view_pos[b + 1]
+	var dz: float = z - state.view_pos[b + 2]
+	return felt_luminosity(star, x, y, z) / maxf(dx * dx + dy * dy + dz * dz, 1e-12)
 
 
 func _change_mass(index: int, front: int, change: float) -> void:
@@ -321,6 +440,30 @@ func _change_light(index: int, front: int, change: float) -> void:
 		state.light_change.append(change)
 
 
+## Hands the changes still travelling for one body over to another.
+func _move_changes(from: int, to: int) -> void:
+	for d: int in state.delta_body.size():
+		if state.delta_body[d] == from:
+			state.delta_body[d] = to
+	for d: int in state.light_body.size():
+		if state.light_body[d] == from:
+			state.light_body[d] = to
+
+
+## Drops the changes still travelling for a body.
+func _forget_changes(index: int) -> void:
+	for d: int in range(state.delta_body.size() - 1, -1, -1):
+		if state.delta_body[d] == index:
+			state.delta_body.remove_at(d)
+			state.delta_front.remove_at(d)
+			state.delta_mass.remove_at(d)
+	for d: int in range(state.light_body.size() - 1, -1, -1):
+		if state.light_body[d] == index:
+			state.light_body.remove_at(d)
+			state.light_front.remove_at(d)
+			state.light_change.remove_at(d)
+
+
 ## A body on rails is integrated again before it is changed.
 func _free_from_rails(index: int) -> void:
 	if state.mode[index] == Gravity.Mode.RAILS:
@@ -328,6 +471,7 @@ func _free_from_rails(index: int) -> void:
 
 
 func _after_change(front: int) -> void:
+	changes += 1
 	state.acc_valid = false
 	if front >= 0:
 		_core.call(&"schedule_front", state, front)

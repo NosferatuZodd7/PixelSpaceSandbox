@@ -101,6 +101,17 @@ static func _add_buttons(theme: Theme) -> void:
 	theme.set_color(&"font_hover_pressed_color", &"Button", Palette.color(&"ui_accent"))
 	theme.set_color(&"font_disabled_color", &"Button", Palette.color(&"ui_disabled"))
 
+	# Square buttons around a pixel icon (the god powers).
+	theme.set_type_variation(&"IconButton", &"Button")
+	var states: Dictionary[StringName, StyleBoxFlat] = {
+		&"normal": normal, &"hover": hover, &"pressed": pressed, &"hover_pressed": pressed,
+		&"disabled": disabled, &"focus": focus,
+	}
+	for state: StringName in states:
+		var box: StyleBoxFlat = states[state].duplicate()
+		box.set_content_margin_all(2)
+		theme.set_stylebox(state, &"IconButton", box)
+
 	# Small "<" and ">" arrows: text only, no box.
 	var empty: StyleBoxEmpty = StyleBoxEmpty.new()
 	empty.content_margin_left = 3

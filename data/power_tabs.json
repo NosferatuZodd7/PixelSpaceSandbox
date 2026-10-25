@@ -1,7 +1,7 @@
 {
-	"notes": "The god-powers toolbar along the bottom: its tabs in order (F1–F8 select them). Each power will be listed here with its tab, icon and brush; 'milestone' says when a tab's powers arrive.",
+	"notes": "The god-powers toolbar along the bottom: its tabs in order (F1–F8 select them). The powers themselves are in data/powers.json; 'milestone' says when a tab's powers arrive, 'hint_key' what the tab says while no power is chosen.",
 	"tabs": [
-		{ "id": "cosmos", "name_key": "TAB_COSMOS", "milestone": 2 },
+		{ "id": "cosmos", "name_key": "TAB_COSMOS", "milestone": 2, "hint_key": "TAB_COSMOS_HINT" },
 		{ "id": "terrain", "name_key": "TAB_TERRAIN", "milestone": 5 },
 		{ "id": "weather", "name_key": "TAB_WEATHER", "milestone": 5 },
 		{ "id": "life", "name_key": "TAB_LIFE", "milestone": 6 },

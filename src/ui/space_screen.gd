@@ -1,7 +1,7 @@
 extends Node
 ## The game screen: a star system running through time, the space view, the
-## big time counter, the god-powers toolbar, inspect windows and the pause
-## menu (Esc).
+## big time counter, the god-powers toolbar and the power in use, inspect
+## windows and the pause menu (Esc).
 ##
 ## Keys: Space pause, + and - speed, 1–0 speed presets, Tab hide the
 ## interface, F1–F8 toolbar tabs; the view handles the camera keys.
@@ -21,6 +21,7 @@ var _menu_open: bool = false
 var _was_paused: bool = false
 
 @onready var _view: SpaceView = $View
+@onready var _powers: PowerTool = $Powers
 @onready var _ui: CanvasLayer = $UI
 @onready var _root: Control = $UI/Root
 @onready var _counter: TimeCounter = $UI/Root/TimeCounter
@@ -46,6 +47,9 @@ func _ready() -> void:
 	simulation = Simulation.new(loaded["system"], SimClock.load_default(t))
 	_view.setup(simulation)
 	_view.selection_changed.connect(_on_selection_changed)
+	_powers.setup(simulation, _view)
+	_toolbar.power_changed.connect(_powers.set_power)
+	_powers.cancelled.connect(_toolbar.cancel_power)
 	_counter.clock = simulation.clock
 	_counter.simulation = simulation
 	_counter.refresh()
@@ -164,7 +168,7 @@ func _on_window_closed(window: InspectWindow) -> void:
 func _update_status() -> void:
 	var parts: PackedStringArray = []
 	if _view.followed != -1:
-		parts.append(Format.tr_units("VIEW_FOLLOWING", tr(simulation.system.body(_view.followed).name_key)))
+		parts.append(Format.tr_units("VIEW_FOLLOWING", Format.body_name(simulation.system.body(_view.followed))))
 	if _view.true_scale:
 		parts.append(tr("VIEW_TRUE_SCALE"))
 	_status.text = "  ·  ".join(parts)

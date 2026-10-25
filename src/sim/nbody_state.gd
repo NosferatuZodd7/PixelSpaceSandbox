@@ -205,6 +205,26 @@ func mass_felt_at(index: int, x: float, y: float, z: float, t: float) -> float:
 	return felt
 
 
+## The mass a body will have once every change still travelling has
+## arrived everywhere.
+func final_mass(index: int) -> float:
+	var total: float = mass[index]
+	for d: int in delta_body.size():
+		if delta_body[d] == index:
+			total += delta_mass[d]
+	return total
+
+
+## The brightness (L☉) a body will have once every change still
+## travelling has arrived everywhere.
+func final_light(index: int) -> float:
+	var total: float = light_base[index]
+	for d: int in light_body.size():
+		if light_body[d] == index:
+			total += light_change[d]
+	return total
+
+
 ## Brightness (L☉) of a body as seen at a point at time t: its base plus the
 ## changes whose front has arrived there.
 func light_felt_at(index: int, x: float, y: float, z: float, t: float) -> float:

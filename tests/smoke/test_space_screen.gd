@@ -222,7 +222,6 @@ func test_toolbar_and_interface_keys() -> void:
 	_action(&"tab_1")
 	await wait_frames(1)
 	assert_eq(toolbar.current, 0, "F1 selects Cosmos")
-	assert_eq(toolbar.content_text(), "These powers arrive in milestone 2.")
 	_action(&"toggle_ui")
 	await wait_frames(1)
 	assert_false((_screen.get_node("UI") as CanvasLayer).visible, "Tab hides the interface")

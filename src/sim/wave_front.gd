@@ -22,8 +22,11 @@ var origin_z: float = 0.0
 var emitted_at: float = 0.0
 ## AU per year; the real speed of light unless a world law changes it.
 var speed: float = Units.C
-## What changed, for the label next to the ring ("Sun removed"…).
+## What changed, for the label next to the ring: a pattern filled with the
+## body's name ("%s vanished").
 var label_key: String = ""
+## The body that changed, or -1.
+var body: int = -1
 
 
 static func create(front_kind: Kind, x: float, y: float, z: float, time: float) -> WaveFront:

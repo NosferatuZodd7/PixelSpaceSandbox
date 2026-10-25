@@ -178,3 +178,32 @@ static func state_from_element_set(elements: PackedFloat64Array, offset: int, t:
 		out[k] = cp * p + cq * q
 		out[k + 3] = rate_p * p + rate_q * q
 	return out
+
+
+## Points along a conic from an element set (see elements_from_state),
+## relative to the parent, as x, y, z triples. A closed orbit gives count
+## points once around from periapsis; an open one gives count points from
+## the incoming arm to the outgoing one, out to max_radius (AU).
+static func conic_points(elements: PackedFloat64Array, count: int, max_radius: float) -> PackedFloat64Array:
+	var a: float = elements[0]
+	var e: float = elements[1]
+	var points: PackedFloat64Array = PackedFloat64Array()
+	points.resize(count * 3)
+	var limit: float = 0.0
+	if a < 0.0:
+		var stretch: float = (max_radius / absf(a) + 1.0) / e
+		limit = acosh(stretch) if stretch > 1.0 else 0.0
+	for k: int in count:
+		var cp: float
+		var cq: float
+		if a > 0.0:
+			var anomaly: float = TAU * k / count
+			cp = cos(anomaly) - e
+			cq = sin(anomaly)
+		else:
+			var anomaly: float = limit * (2.0 * k / maxf(count - 1, 1) - 1.0)
+			cp = e - cosh(anomaly)
+			cq = sinh(anomaly)
+		for axis: int in 3:
+			points[k * 3 + axis] = cp * elements[5 + axis] + cq * elements[8 + axis]
+	return points

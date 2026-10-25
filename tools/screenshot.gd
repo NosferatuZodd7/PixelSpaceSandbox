@@ -7,6 +7,11 @@ extends SceneTree
 ## For the game scene (--scene=res://scenes/space.tscn) also:
 ##   [--time=2026-10-13T12:00:00] [--select=earth] [--follow=earth] [--zoom=pixels per AU]
 ##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
+##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y]
+## --power chooses a god power; --click uses it at a screen pixel (with
+## --drag, dragging from there to the --drag pixel); then the scene runs
+## for --wait frames; --hover finally points the mouse at a pixel to show
+## the power's preview.
 ##
 ## Saves the 640×360 frame, plus an enlarged copy (nearest-neighbour) when
 ## --scale is above 1.
@@ -45,8 +50,14 @@ func _capture() -> void:
 	var deadline: int = Time.get_ticks_msec() + 20000
 	while sky != null and sky.is_generating() and Time.get_ticks_msec() < deadline:
 		await process_frame
+	if view != null and args.has("power"):
+		await _use_power(scene, args)
 	for i: int in int(args.get("wait", "10")):
 		await process_frame
+	if args.has("hover"):
+		_mouse(_pixel(args["hover"]), -1, false)
+		for i: int in 2:
+			await process_frame
 	await RenderingServer.frame_post_draw
 
 	var image: Image = root.get_texture().get_image()
@@ -77,6 +88,43 @@ func _set_up_view(scene: Node, view: SpaceView, args: Dictionary[String, String]
 		view.true_scale = true
 	if args.get("menu", "") == "open" and scene.has_method(&"open_menu"):
 		scene.call(&"open_menu")
+
+
+func _use_power(scene: Node, args: Dictionary[String, String]) -> void:
+	var toolbar: Toolbar = scene.get_node("UI/Root/Toolbar")
+	toolbar.select(0)
+	toolbar.choose_power(args["power"])
+	await process_frame
+	if not args.has("click"):
+		return
+	var at: Vector2 = _pixel(args["click"])
+	_mouse(at, MOUSE_BUTTON_LEFT, true)
+	var to: Vector2 = _pixel(args["drag"]) if args.has("drag") else at
+	_mouse(to, -1, false)
+	await process_frame
+	_mouse(to, MOUSE_BUTTON_LEFT, false)
+	await process_frame
+
+
+## A mouse button event (button -1: a motion) at a screen pixel.
+func _mouse(at: Vector2, button: int, pressed: bool) -> void:
+	if button == -1:
+		var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+		motion.position = at
+		motion.global_position = at
+		root.push_input(motion, true)
+		return
+	var event: InputEventMouseButton = InputEventMouseButton.new()
+	event.button_index = button as MouseButton
+	event.position = at
+	event.global_position = at
+	event.pressed = pressed
+	root.push_input(event, true)
+
+
+func _pixel(text: String) -> Vector2:
+	var parts: PackedStringArray = text.split(",")
+	return Vector2(float(parts[0]), float(parts[1])) if parts.size() == 2 else Vector2.ZERO
 
 
 func _arguments() -> Dictionary[String, String]:

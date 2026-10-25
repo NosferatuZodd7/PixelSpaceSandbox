@@ -11,6 +11,7 @@ const KINDS: Dictionary[String, CelestialBody.Kind] = {
 	"planet": CelestialBody.Kind.PLANET,
 	"dwarf_planet": CelestialBody.Kind.DWARF_PLANET,
 	"moon": CelestialBody.Kind.MOON,
+	"black_hole": CelestialBody.Kind.BLACK_HOLE,
 }
 const JPL_ELEMENTS: Array[String] = ["a", "e", "i", "L", "peri", "node"]
 

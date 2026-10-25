@@ -30,7 +30,7 @@
 | Time controls with the big pixel counter | ✅ | Space pauses, + and − change speed, 1–0 presets; from ×0.01 to a billion years per second |
 | Habitable zone band | ✅ | Dithered green band from the star's luminosity |
 | Visual style: stars, planets, dashed orbits, labels | ✅ | Glowing stars, spinning lit discs with dithered terminators, Saturn's rings, dashed orbits, names that never overlap. Clouds, seasons and city lights come with planet maps (milestone 5) |
-| Bottom toolbar shell with its tabs | ✅ | 8 tabs from `data/power_tabs.json`, F1–F8; each says when its powers arrive |
+| Bottom toolbar shell with its tabs | ✅ | 8 tabs from `data/power_tabs.json`, F1–F8; each says when its powers arrive (Cosmos has its powers since milestone 2) |
 | Inspect window | ✅ | Click a body; live values; drag it, pin it, several open at once |
 | Pause menu | ✅ | Esc: continue, settings, title screen, quit |
 
@@ -39,13 +39,13 @@
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Benchmark (low profile, 8 ms per frame budget) | 🟡 | Scene and tool in place (`src/sim/benchmark_scenario.gd`, `tools/benchmark.gd`); the native kernel meets the budget (0.9 ms), the GDScript one does not (70 ms), so the game runs on the native kernel (approved). Still to measure: the whole game, drawing included, once the game screen runs on it |
-| N-body physics; test particles with sleeping and waking | 🟡 | Kernel done and tested in GDScript and C++ (identical results, also on Windows). The game screen runs on it: the untouched preset rides its real orbits; `Simulation.leave_pristine()` switches every body to n-body gravity (nothing in the game triggers it until the Cosmos powers arrive) |
+| N-body physics; test particles with sleeping and waking | 🟡 | Kernel done and tested in GDScript and C++ (identical results, also on Windows). The game screen runs on it: the untouched preset rides its real orbits; the first Cosmos power switches every body to n-body gravity, and each body then shows the orbit it is on right now. Particles are not yet used by the game (belts and comets) |
 | Belts, Oort cloud, comets with tails | ⬜ | |
-| Light and gravity fronts at c; gravity ghosts; speed-of-light world law | 🟡 | Kernel gates every pull by the fronts that have arrived, and keeps ghosts pulling; not yet created by the game |
+| Light and gravity fronts at c; gravity ghosts; speed-of-light world law | 🟡 | Every Cosmos power sends a front; pull and starlight change only where it has arrived (also for a body removed or flung before its own news had spread); a removed body pulls on as a faint ghost; fronts are drawn as warm (light) and violet (gravity) rings labelled with what changed ("Star 1 appeared"). The law can be set in code (`Simulation.light_speed`, instant = INF); its panel is still to come |
 | Smart time (follow the wave, slow motion on arrival, jump to next arrival) | ⬜ | Done so far: the game starts at one day per second; clickable slower/pause/faster buttons; the counter warns when the simulation cannot keep up; discs keep turning (at most one turn per second on screen) however fast time runs |
 | Ghost trajectories | ⬜ | |
 | Collisions, impacts, Roche limit (rings, tidal disruption) | 🟡 | Kernel finds collisions and impacts (swept tests); merging, debris and the Roche limit not yet built |
-| Cosmos powers (place, fling, delete, second sun, black hole, rogue planet) | ⬜ | |
+| Cosmos powers (place, fling, delete, second sun, black hole, rogue planet) | ✅ | Cosmos tab with 11 powers from `data/powers.json`: sun-like star, red dwarf, blue giant, white dwarf, black hole, gas giant, rocky planet, moon, rogue planet, fling, delete. Click: circular orbit around what dominates there (both masses counted); drag: throw; rogue planet: sweeps through and leaves; preview of the path while aiming; right click or Esc puts the power away. The habitable zone is drawn from every star's light (two suns bend it into one shape) |
 | Timeline: snapshots, rewind, undo | ⬜ | The state copies itself in full (`NBodyState.copy()`) |
 | Overlays, ruler, light pulse | ⬜ | |
 | Notifications; world laws for the cosmos | ⬜ | |
@@ -63,6 +63,7 @@
 | Fresh-checkout crash with a GDExtension | Done | `tools/run_tests.sh`, `tools/run_tests.ps1` | Fresh imports, 3 runs | Godot 4.7.2 crashes on exit after loading an extension it found during the same run (also with an empty class and with godot-cpp master); listing the extensions before the first import avoids it | — |
 | Particle waking rule | Done | both kernels, `gravity.gd` | 2 new tests (distant companion star; falling asleep again) | A companion star's Hill sphere woke every belt particle; the wake zone is now capped at half the body's distance to its parent, and particles sleep again beyond twice the zone | — |
 | Code review fixes | Done | both kernels, `gravity.gd`, `gravity_self_test.gd`, `benchmark_scenario.gd`, `tools/`, `native/SConstruct`, `CLAUDE.md` | Full suite (111 tests); new test: a moon sleeps around a planet only deep in its Hill sphere; benchmark rerun | Fixed: the outer star's tide ignored when sleeping around a planet; a companion's wake zone smaller than its Hill sphere; particles near a companion unable to sleep; the self-test needing bit-exact agreement across platforms (now within 10^-9 AU); a confusing failure when the native library is not built; a nested godot-cpp checkout being loaded; duplicated timing code; unchecked benchmark arguments | — |
+| Cosmos powers | Done | `data/powers.json`, `src/sim/power_catalog.gd`, `simulation.gd`, `nbody_state.gd`, `kepler.gd`, `src/view/power_tool.gd`, `space_view.gd`, `body_sprite.gd`, `src/ui/toolbar.gd`, `inspect_window.gd`, `assets/shaders/habitable_zone.gdshader`, `tools/screenshot.gd` | `test_power_catalog` (6), `test_cosmos_changes` (15), `test_cosmos_powers` (8, real clicks and drags), `test_kepler` (+1), `test_format` (+1); full suite 155 | Pass. Found while testing: removing or flinging a body whose own arrival was still spreading left its mass and light behind for ever; the moons of a removed planet made the whole inner system look like theirs | Smart time and ghost trajectories |
 | Benchmark scene and tool | Done | `src/sim/benchmark_scenario.gd`, `tools/benchmark.gd` | 3 repeats × 600 frames per kernel, editor and exported release | Release build: GDScript 69–74 ms per frame (budget 8 ms), C++ 0.9 ms; see DESIGN.md, "Benchmark" | — |
 
 ## Milestone 3 — New system dialog ⬜

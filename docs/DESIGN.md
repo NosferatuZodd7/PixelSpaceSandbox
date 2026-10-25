@@ -192,8 +192,12 @@ creates fronts when the player changes the system:
   an exact arc around its body instead, so the line passes through it at any
   zoom.
 - Names never cover bodies, each other, the counter or the toolbar.
-- The habitable zone is a dithered green band (`dither_ring.gdshader`) whose
-  fill fades out when it is much wider than the screen.
+- The habitable zone is a dithered green band whose fill fades out when it
+  is much wider than the screen. Since milestone 2 a shader
+  (`habitable_zone.gdshader`) draws it from the starlight of every star (up
+  to 8) as seen from the middle of the screen: where a planet would get
+  between 0.53 and 1.1 times the Earth's light. One star gives a ring; two
+  bend it into one shape around the pair.
 - The star backdrop does not move when panning: real background stars are
   so far away that crossing a whole system does not shift them.
 
@@ -276,6 +280,36 @@ week per second; every moon but ours and the outermost at one year per
 second), and come back to full integration when time slows down. A body
 sets another's step only if it has at least a thousandth of its mass, so
 a tiny moon on rails no longer forces its planet into minute-long steps.
+
+### Changing the system: the Cosmos powers
+
+Powers come from `data/powers.json` (`PowerCatalog` parses them and builds
+the bodies of the "place" powers, numbered by name: "Star 1", "Planet 2").
+`PowerTool`, after the view in the scene so it sees the mouse first, turns
+clicks and drags into three simulation calls, each of which sends a front
+from the body at the committed moment:
+
+- `place_body`: a click puts the body on a circular orbit around what
+  dominates the point (the smallest Hill sphere containing it, else the
+  strongest pull), counting both masses, so two suns circle each other; a
+  drag throws it instead, at the circular speed times the drag length over
+  40 pixels, along the drag. A flyby power (the rogue planet) gives it the
+  speed that passes the point closest to its star and leaves at 20 km/s.
+- `fling`: the body keeps its index and gets the new velocity; a ghost
+  copy keeps the old path, mass and light, with any change of its own still
+  on its way, until the news reaches each receiver.
+- `remove_body`: the body becomes a ghost that loses all of its mass and
+  light behind the front, including an arrival still spreading.
+
+Placing and circling never wait for the light: the Hill spheres used to
+choose what a point circles, and the orbits shown, use the masses every
+body will have once all news has arrived. While aiming, the tool draws the
+two-body conic the body would follow (`Kepler.conic_points`). Once the
+system has changed, every body shows the osculating orbit it is on around
+what it circles now (the kernel's parents), recomputed as it drifts.
+Fronts are drawn as dashed rings, warm for light and violet for gravity,
+only along the part that crosses the screen when huge, and labelled where
+they are nearest the middle of the screen without covering anything.
 
 ### Collisions
 
@@ -403,3 +437,5 @@ at startup as on every later run.
 | 14 | One global velocity-Verlet step, a power of two of 2^-40 years chosen from the state alone, so results never depend on frame timing | 2026-10 |
 | 15 | Mass changes travel as fronts; removed bodies stay as ghosts until the news has passed every receiver | 2026-10 |
 | 16 | The gravity kernel exists in GDScript (reference) and C++ (GDExtension) with bit-identical results; the game runs on C++ (approved after the benchmark) | 2026-10 |
+| 17 | A click places a body on a circular orbit, a drag throws it; previews and shown orbits are two-body conics around what the body circles | 2026-10 |
+| 18 | The habitable zone is drawn from the summed light of every star, not as one ring per star | 2026-10 |

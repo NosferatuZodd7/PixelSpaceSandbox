@@ -78,3 +78,15 @@ func test_physical_values() -> void:
 	assert_eq(Format.distance(Units.au_from_km(384400.0)), "384 400 km")
 	assert_eq(Format.gravity(3.71), "0,38 g", "gravity on Mars")
 	assert_eq(Format.temperature(254.0), "254 K (-19 °C)")
+
+
+func test_body_names() -> void:
+	_in("en")
+	var b: CelestialBody = CelestialBody.new()
+	b.name_key = "BODY_SUN"
+	assert_eq(Format.body_name(b), "Sun", "a named body")
+	b.name_key = "PLACED_STAR"
+	b.name_number = 2
+	assert_eq(Format.body_name(b), "Star 2", "a placed body is numbered")
+	_in("pt_PT")
+	assert_eq(Format.body_name(b), "Estrela 2")
