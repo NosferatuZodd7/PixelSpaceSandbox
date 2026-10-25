@@ -7,7 +7,7 @@ extends SceneTree
 ## For the game scene (--scene=res://scenes/space.tscn) also:
 ##   [--time=2026-10-13T12:00:00] [--select=earth] [--follow=earth] [--zoom=pixels per AU]
 ##   [--speed=4] [--menu=open] [--true-scale=on] [--wait=frames]
-##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y]
+##   [--power=sun_like_star] [--click=x,y] [--drag=x,y] [--hover=x,y] [--smart=on]
 ## For the title screen: [--update=available] shows the update notice as
 ## when a newer build is out.
 ## --power chooses a god power; --click uses it at a screen pixel (with
@@ -62,6 +62,8 @@ func _capture() -> void:
 		await process_frame
 	if view != null and args.has("power"):
 		await _use_power(scene, args)
+	if args.get("smart", "") == "on" and scene.has_method(&"set_smart_time"):
+		scene.call(&"set_smart_time", true)
 	for i: int in int(args.get("wait", "10")):
 		await process_frame
 	if args.has("hover"):

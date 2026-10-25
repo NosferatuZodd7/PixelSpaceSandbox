@@ -18,6 +18,8 @@
 		"follow": ["F"],
 		"home_view": ["H"],
 		"true_scale": ["T"],
+		"next_arrival": ["N"],
+		"smart_time": ["G"],
 		"toggle_ui": ["Tab"],
 		"zoom_in": ["PageUp"],
 		"zoom_out": ["PageDown"],

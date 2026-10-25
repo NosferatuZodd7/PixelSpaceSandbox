@@ -13,6 +13,8 @@ var ladder: PackedFloat64Array = PackedFloat64Array([1.0])
 ## Number key → ladder index.
 var presets: Dictionary[String, int] = {}
 var speed_index: int = 0
+## A speed set by smart time instead of the ladder's (NAN when none).
+var steered_speed: float = NAN
 
 
 static func load_default(start_time: float) -> SimClock:
@@ -42,7 +44,21 @@ func configure(data: Dictionary) -> void:
 
 ## Simulated seconds per real second.
 func speed() -> float:
-	return ladder[speed_index]
+	return ladder[speed_index] if is_nan(steered_speed) else steered_speed
+
+
+## Runs at any speed (smart time) until released or the player picks one.
+func steer(seconds_per_second: float) -> void:
+	steered_speed = seconds_per_second
+
+
+func is_steered() -> bool:
+	return not is_nan(steered_speed)
+
+
+## Back to the speed the player chose.
+func release() -> void:
+	steered_speed = NAN
 
 
 func years_per_second() -> float:
@@ -60,10 +76,12 @@ func advance(real_seconds: float) -> float:
 
 
 func faster() -> void:
+	release()
 	speed_index = mini(speed_index + 1, ladder.size() - 1)
 
 
 func slower() -> void:
+	release()
 	speed_index = maxi(speed_index - 1, 0)
 
 
@@ -71,6 +89,7 @@ func slower() -> void:
 func use_preset(key: String) -> bool:
 	if not presets.has(key):
 		return false
+	release()
 	speed_index = presets[key]
 	paused = false
 	return true

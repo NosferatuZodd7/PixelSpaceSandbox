@@ -227,3 +227,53 @@ func test_placed_bodies_can_be_inspected() -> void:
 	await wait_frames(2)
 	rows = windows[0].rows()
 	assert_eq(rows[0], PackedStringArray(["INSPECT_KIND", "Planet"]), "integrated planets still inspect")
+
+
+static func _far_star() -> CelestialBody:
+	var star: CelestialBody = CelestialBody.new()
+	star.id = &"far_star"
+	star.name_key = "PLACED_STAR"
+	star.name_number = 7
+	star.kind = CelestialBody.Kind.STAR
+	star.mass = 1.0
+	star.radius = Units.au_from_km(695700.0)
+	star.luminosity = 1.0
+	star.temperature = 5772.0
+	star.look = &"sun"
+	return star
+
+
+func test_the_news_of_a_change_and_jumping_to_its_arrival() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.place_body(_far_star(), 0.0, 20.0, 0.0, 0.0, 0.0, 0.0, "FRONT_PLACED")
+	var neptune: int = _index(&"neptune")
+	_view.select(neptune)
+	await wait_frames(2)
+	var windows: Array[InspectWindow] = _screen.call(&"inspect_windows")
+	var news: PackedStringArray = []
+	for row: PackedStringArray in windows[0].rows():
+		if row[0] == "Star 7 appeared":
+			news = row
+	assert_eq(news.size(), 2, "Neptune's window says the news is on its way")
+	assert_true(news.size() == 2 and news[1].begins_with("arrives in"), "and when it arrives: %s" % news)
+	var next: Dictionary = simulation.next_arrival()
+	var first: int = next["body"]
+	_action(&"next_arrival")
+	await wait_frames(2)
+	assert_true(simulation.news_for(first).is_empty(), "N jumps to the moment the first body hears of it")
+	assert_true(simulation.clock.paused, "and waits there")
+
+
+func test_smart_time_follows_the_wave() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.place_body(_far_star(), 0.0, 20.0, 0.0, 0.0, 0.0, 0.0, "FRONT_PLACED")
+	_action(&"smart_time")
+	await wait_frames(30)
+	assert_true(_screen.get(&"smart_time"), "G follows the wave")
+	assert_false(simulation.clock.paused, "time runs")
+	assert_true(simulation.clock.is_steered(), "at the speed the wave needs")
+	assert_true(Vector2(_view.camera.center_x, _view.camera.center_y - 20.0).length() < 1e-6, "watching from where it started")
+	_action(&"speed_4")
+	await wait_frames(1)
+	assert_false(_screen.get(&"smart_time"), "choosing a speed takes over again")
+	assert_false(simulation.clock.is_steered())

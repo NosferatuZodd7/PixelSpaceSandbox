@@ -140,6 +140,9 @@ UPDATE_ERROR_NETWORK,no connection,sem ligação
 UPDATE_ERROR_CHECKSUM,the download is damaged,o ficheiro veio danificado
 UPDATE_ERROR_FOLDER,the game's folder cannot be changed,a pasta do jogo não pode ser alterada
 UPDATE_ERROR_INSTALL,the files could not be replaced,não foi possível substituir os ficheiros
+NEWS_ARRIVES_IN,arrives in %s,chega daqui a %s
+TIME_NEXT_ARRIVAL,Jump to when the news next arrives (N),Saltar para a próxima chegada da notícia (N)
+TIME_FOLLOW_WAVE,Follow the wave (G),Seguir a onda (G)
 TAB_COSMOS,Cosmos,Cosmos
 TAB_TERRAIN,Terrain,Terreno
 TAB_WEATHER,Weather and nature,Clima e natureza
@@ -177,4 +180,5 @@ FRONT_FLUNG,%s changed course,%s mudou de rumo
 FRONT_MERGED,Collision: %s,Colisão: %s
 FRONT_TORN,%s torn into a ring,%s desfeito num anel
 VIEW_FOLLOWING,Following %s,A seguir: %s
+VIEW_FOLLOWING_WAVE,FOLLOWING THE WAVE,A SEGUIR A ONDA
 VIEW_TRUE_SCALE,TRUE SCALE,ESCALA REAL

@@ -3,8 +3,9 @@ extends Node
 ## big time counter, the god-powers toolbar and the power in use, inspect
 ## windows and the pause menu (Esc).
 ##
-## Keys: Space pause, + and - speed, 1–0 speed presets, Tab hide the
-## interface, F1–F8 toolbar tabs; the view handles the camera keys.
+## Keys: Space pause, + and - speed, 1–0 speed presets, N jump to the next
+## arrival of the news of a change, G follow the wave (smart time), Tab hide
+## the interface, F1–F8 toolbar tabs; the view handles the camera keys.
 
 const PRESET_PATH: String = "res://data/presets/solar_system.json"
 const TITLE_SCENE: String = "res://scenes/main.tscn"
@@ -15,6 +16,9 @@ var simulation: Simulation
 var start_time: float = NAN
 ## The settings the pause menu edits. Defaults to the App's.
 var settings: GameSettings
+## Smart time: following the newest front, with time running so it crosses
+## the view in a few seconds and easing down as it reaches a body.
+var smart_time: bool = false
 
 var _windows: Array[InspectWindow] = []
 var _menu_open: bool = false
@@ -55,6 +59,8 @@ func _ready() -> void:
 	_counter.refresh()
 	_time_controls.clock = simulation.clock
 	_time_controls.changed.connect(_counter.refresh)
+	_time_controls.next_arrival_requested.connect(jump_to_next_arrival)
+	_time_controls.follow_wave_toggled.connect(set_smart_time)
 	_pause_menu.resume_requested.connect(close_menu)
 	_pause_menu.settings_requested.connect(_open_settings)
 	_pause_menu.title_requested.connect(func() -> void: get_tree().change_scene_to_file(TITLE_SCENE))
@@ -63,8 +69,54 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not _menu_open:
+		_steer_time(delta)
 		simulation.advance(delta)
+	_time_controls.news_travelling = not simulation.fronts.is_empty()
 	_update_status()
+
+
+## Runs time on to the moment the news of a change next reaches a body,
+## and pauses there.
+func jump_to_next_arrival() -> void:
+	set_smart_time(false)
+	simulation.jump_to_next_arrival()
+	simulation.clock.paused = true
+	_counter.refresh()
+
+
+func set_smart_time(on: bool) -> void:
+	smart_time = on and not simulation.fronts.is_empty()
+	_time_controls.show_following(smart_time)
+	if smart_time:
+		simulation.clock.paused = false
+		simulation.clock.steer(simulation.clock.speed())
+		_view.follow(-1)
+	else:
+		simulation.clock.release()
+	_counter.refresh()
+
+
+func _steer_time(delta: float) -> void:
+	if not smart_time:
+		return
+	var clock: SimClock = simulation.clock
+	# Choosing a speed or pausing hands time back to the player; so does the
+	# wave passing everything.
+	if simulation.fronts.is_empty() or not clock.is_steered() or clock.paused:
+		set_smart_time(false)
+		return
+	var front: WaveFront = simulation.fronts.back()
+	var camera: SpaceCamera = _view.camera
+	camera.look_at(front.origin_x, front.origin_y)
+	var radius: float = front.radius_at(clock.time)
+	var height: float = camera.viewport_size.y
+	if radius > 0.0 and radius * camera.scale > 0.4 * height:
+		camera.set_scale_now(0.4 * height / radius)
+	var wanted: float = SmartTime.wave_speed(0.5 * height / camera.scale)
+	var next: Dictionary = simulation.next_arrival(true)
+	if not next.is_empty():
+		wanted = minf(wanted, SmartTime.arrival_speed((float(next["time"]) - clock.time) * Units.YEAR_SECONDS))
+	clock.steer(SmartTime.ease_towards(clock.speed(), wanted, delta))
 
 
 func is_menu_open() -> bool:
@@ -113,6 +165,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	var clock: SimClock = simulation.clock
 	if event.is_action_pressed(&"pause"):
 		clock.toggle_pause()
+	elif event.is_action_pressed(&"next_arrival"):
+		jump_to_next_arrival()
+	elif event.is_action_pressed(&"smart_time"):
+		set_smart_time(not smart_time)
 	elif event.is_action_pressed(&"speed_up", true):
 		clock.faster()
 		clock.paused = false
@@ -171,4 +227,6 @@ func _update_status() -> void:
 		parts.append(Format.tr_units("VIEW_FOLLOWING", Format.body_name(simulation.system.body(_view.followed))))
 	if _view.true_scale:
 		parts.append(tr("VIEW_TRUE_SCALE"))
+	if smart_time:
+		parts.append(tr("VIEW_FOLLOWING_WAVE"))
 	_status.text = "  ·  ".join(parts)

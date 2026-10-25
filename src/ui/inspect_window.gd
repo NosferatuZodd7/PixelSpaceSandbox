@@ -144,6 +144,12 @@ func refresh() -> void:
 		values.append(_row("INSPECT_IN_HABITABLE_ZONE", tr("YES") if flux > 0.0 and Astro.in_habitable_zone(1.0, flux) else tr("NO")))
 		if b.approximate_phase and simulation.is_pristine():
 			values.append(_row("INSPECT_NOTE", tr("INSPECT_APPROXIMATE_PHASE")))
+	for news: Dictionary in simulation.news_for(body_index):
+		var about: String = Format.body_name(system.body(news["body"])) if int(news["body"]) >= 0 else ""
+		values.append(_row(
+			Format.tr_units(str(news["label_key"]), about),
+			Format.tr_units("NEWS_ARRIVES_IN", Format.duration(float(news["seconds"])))
+		))
 	_fill(values)
 
 

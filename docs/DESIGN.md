@@ -286,6 +286,21 @@ second), and come back to full integration when time slows down. A body
 sets another's step only if it has at least a thousandth of its mass, so
 a tiny moon on rails no longer forces its planet into minute-long steps.
 
+### Smart time
+
+Light crosses the inner Solar System in minutes and the whole of it in
+hours, while orbits take months to centuries. `Simulation.news_for(body)`
+tells when each travelling front will reach a body (from its distance now;
+inspect windows show it), `next_arrival()` which body hears next, and
+`jump_to_next_arrival()` runs time to a second after it (checking again,
+since bodies move while the news travels). Following the wave, the screen
+steers the clock (`SimClock.steer`, any speed, released as soon as the
+player picks one): the camera stays on the newest front's origin and zooms
+out to keep it in view, time runs so it crosses half the view in 3 s
+(`SmartTime.wave_speed`), at most so slowly that the next arrival at a star
+or planet takes 1.5 s (`arrival_speed`), changing by at most ×8 per second
+(`ease_towards`).
+
 ### Changing the system: the Cosmos powers
 
 Powers come from `data/powers.json` (`PowerCatalog` parses them and builds

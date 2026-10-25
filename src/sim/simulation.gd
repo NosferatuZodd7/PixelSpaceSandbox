@@ -434,6 +434,56 @@ func main_star_at(x: float, y: float, z: float) -> int:
 	return best
 
 
+## The news still on its way to a body: for each front that has not
+## reached it yet, {"front": index, "body": what changed, "label_key",
+## "seconds": simulated seconds until it arrives}, soonest first.
+func news_for(index: int) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	var b: int = index * 3
+	for f: int in fronts.size():
+		var front: WaveFront = fronts[f]
+		if front.body == index:
+			continue
+		var distance: float = front.distance_to(state.view_pos[b], state.view_pos[b + 1], state.view_pos[b + 2])
+		var left: float = front.emitted_at + distance / front.speed - clock.time
+		if left > 0.0:
+			found.append({"front": f, "body": front.body, "label_key": front.label_key, "seconds": left * Units.YEAR_SECONDS})
+	found.sort_custom(func(a: Dictionary, c: Dictionary) -> bool: return a["seconds"] < c["seconds"])
+	return found
+
+
+## The next moment a front reaches a body that is still in the system
+## (moons left out when skip_moons is true): {"time": years, "body",
+## "front"}, or empty when no news is travelling.
+func next_arrival(skip_moons: bool = false) -> Dictionary:
+	var best: Dictionary = {}
+	for i: int in system.size():
+		if not is_present(i) or (skip_moons and system.body(i).kind == CelestialBody.Kind.MOON):
+			continue
+		var news: Array[Dictionary] = news_for(i)
+		if news.is_empty():
+			continue
+		var at: float = clock.time + float(news[0]["seconds"]) / Units.YEAR_SECONDS
+		if best.is_empty() or at < float(best["time"]):
+			best = {"time": at, "body": i, "front": news[0]["front"]}
+	return best
+
+
+## Runs time on to just after the next arrival (a second after it; bodies
+## move while the news travels, so it checks and goes on if needed).
+func jump_to_next_arrival() -> void:
+	var next: Dictionary = next_arrival()
+	if next.is_empty():
+		return
+	set_time(float(next["time"]) + 1.0 / Units.YEAR_SECONDS)
+	for attempt: int in 3:
+		var left: Array[Dictionary] = news_for(next["body"]).filter(
+			func(news: Dictionary) -> bool: return news["front"] == next["front"])
+		if left.is_empty():
+			return
+		set_time(clock.time + (float(left[0]["seconds"]) + 1.0) / Units.YEAR_SECONDS)
+
+
 ## Starts a front at a point at the committed moment, carrying a change of
 ## light, of gravity or both, about a body (or -1). Returns its index, or -1
 ## when changes are felt at once (the "instant" world law).

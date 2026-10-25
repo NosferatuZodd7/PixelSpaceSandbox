@@ -75,3 +75,17 @@ func test_earth_physics() -> void:
 	assert_almost_eq(Astro.surface_gravity(mass, radius), 9.82, 0.01, "surface gravity")
 	assert_almost_eq(Astro.escape_velocity(mass, radius), 11.19, 0.01, "escape velocity")
 	assert_almost_eq(Astro.equilibrium_temperature(1.0, 1.0, 0.306), 254.0, 1.5, "equilibrium temperature")
+
+
+func test_smart_time_can_steer_the_clock_until_the_player_takes_over() -> void:
+	var clock: SimClock = SimClock.load_default(0.0)
+	var chosen: float = clock.speed()
+	clock.steer(12345.0)
+	assert_eq(clock.speed(), 12345.0, "any speed, not only the ladder's")
+	assert_true(clock.is_steered())
+	clock.faster()
+	assert_false(clock.is_steered(), "the player's choice wins")
+	assert_true(clock.speed() > chosen, "from the speed they had chosen")
+	clock.steer(5.0)
+	clock.release()
+	assert_eq(clock.speed(), clock.ladder[clock.speed_index], "released, back on the ladder")
