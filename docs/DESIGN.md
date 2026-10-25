@@ -198,6 +198,11 @@ creates fronts when the player changes the system:
   to 8) as seen from the middle of the screen: where a planet would get
   between 0.53 and 1.1 times the Earth's light. One star gives a ring; two
   bend it into one shape around the pair.
+- Small bodies are single pixels by kind (rock grey asteroids, icy blue
+  Kuiper belt, faint Oort cloud); comets are named and, within 5 AU of
+  the star that lights them most, grow a tail pointing away from it,
+  0.25 AU long at 1 AU and growing as 1/d² (up to 1 AU), dithered thinner
+  towards its end.
 - The star backdrop does not move when panning: real background stars are
   so far away that crossing a whole system does not shift them.
 

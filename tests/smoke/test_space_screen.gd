@@ -228,3 +228,29 @@ func test_toolbar_and_interface_keys() -> void:
 	_action(&"toggle_ui")
 	await wait_frames(1)
 	assert_true((_screen.get_node("UI") as CanvasLayer).visible, "and shows it again")
+
+
+func test_belts_and_the_oort_cloud_are_drawn() -> void:
+	_simulation().clock.paused = true
+	await wait_frames(2)
+	var shown: Dictionary = _view.particles_drawn()
+	assert_true(int(shown.get(Gravity.ParticleKind.ASTEROID, 0)) > 300, "the asteroid belt shows as dots (%s)" % shown)
+	assert_eq(int(shown.get(Gravity.ParticleKind.OORT, 0)), 0, "the Oort cloud is far off screen")
+	_view.camera.set_scale_now(0.005)
+	await wait_frames(2)
+	shown = _view.particles_drawn()
+	assert_true(int(shown.get(Gravity.ParticleKind.OORT, 0)) > 100, "zoomed far out, the Oort cloud appears (%s)" % shown)
+
+
+func test_a_comet_near_the_sun_grows_a_tail_away_from_it() -> void:
+	var simulation: Simulation = _simulation()
+	var halley: int = simulation.particle_named("BODY_HALLEY")
+	assert_eq(_view.comet_tail(halley), Vector2.ZERO, "far out, Halley has no tail")
+	# Halley's next perihelion: late July 2061.
+	simulation.set_time(Units.years_from_unix(Time.get_unix_time_from_datetime_string("2061-07-28T00:00:00")))
+	simulation.clock.paused = true
+	await wait_frames(2)
+	var tail: Vector2 = _view.comet_tail(halley)
+	assert_true(tail.length() > 10.0, "near the Sun its tail is long (%s px)" % tail.length())
+	var head: Vector2 = Vector2(simulation.state.p_view[halley * 3], -simulation.state.p_view[halley * 3 + 1])
+	assert_true(tail.normalized().dot(head.normalized()) > 0.95, "and points away from the Sun")

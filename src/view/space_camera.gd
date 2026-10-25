@@ -7,7 +7,7 @@ extends RefCounted
 ## view is exact from the surface of a star to the edge of the system
 ## (a floating origin around the camera).
 
-const MIN_SCALE: float = 0.5
+const MIN_SCALE: float = 0.002
 const MAX_SCALE: float = 2.0e7
 ## How quickly a zoom eases in (higher is snappier).
 const ZOOM_EASE: float = 14.0

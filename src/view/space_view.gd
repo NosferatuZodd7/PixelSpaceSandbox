@@ -38,6 +38,21 @@ const PRIORITY: Dictionary[CelestialBody.Kind, int] = {
 ## Rings bigger than this (radius, pixels) are drawn only where they cross
 ## the screen.
 const FRONT_ARC_PIXELS: float = 3000.0
+## Small bodies as single pixels, by kind.
+const PARTICLE_COLORS: Dictionary[Gravity.ParticleKind, StringName] = {
+	Gravity.ParticleKind.ASTEROID: &"regolith", Gravity.ParticleKind.ICY: &"ice",
+	Gravity.ParticleKind.OORT: &"star_dim", Gravity.ParticleKind.COMET: &"white",
+	Gravity.ParticleKind.DEBRIS: &"dust",
+}
+## A comet grows a tail, pointing away from the star lighting it most,
+## inside this distance from it (AU)...
+const TAIL_START_AU: float = 5.0
+## ...as long as this (AU) at 1 AU, growing as the inverse square of the
+## distance, up to TAIL_MAX_AU.
+const TAIL_AT_1_AU: float = 0.25
+const TAIL_MAX_AU: float = 1.0
+## Colours along a tail, from the head out.
+const TAIL_COLORS: Array[StringName] = [&"white", &"star_a", &"ice", &"star_mid"]
 
 var simulation: Simulation
 var camera: SpaceCamera = SpaceCamera.new()
@@ -57,12 +72,18 @@ var _path_times: PackedFloat64Array = []
 ## What each cached path goes around (what a body circles can change).
 var _path_parents: PackedInt32Array = []
 var _label_order: PackedInt32Array = []
+## Small bodies drawn last frame, by kind, and comets' tails (screen pixels,
+## from the head) and heads.
+var _drawn: Dictionary[Gravity.ParticleKind, int] = {}
+var _tails: Dictionary[int, Vector2] = {}
+var _comet_heads: Dictionary[int, Vector2] = {}
 ## The osculating orbits drawn once the system has changed: an element set
 ## per body (empty when it circles nothing).
 var _elements: Array[PackedFloat64Array] = []
 var _changes_seen: int = -1
 var _hz: Node2D
 var _orbits: Node2D
+var _particles: Node2D
 var _bodies: Node2D
 var _overlay: Node2D
 var _dragging: bool = false
@@ -74,9 +95,11 @@ func setup(sim: Simulation) -> void:
 	simulation = sim
 	_hz = _layer("HabitableZone")
 	_orbits = _layer("Orbits")
+	_particles = _layer("Particles")
 	_bodies = _layer("Bodies")
 	_overlay = _layer("Overlay")
 	_orbits.draw.connect(_draw_orbits)
+	_particles.draw.connect(_draw_particles)
 	_overlay.draw.connect(_draw_overlay)
 	var hz_material: ShaderMaterial = ShaderMaterial.new()
 	hz_material.shader = HZ_SHADER
@@ -155,6 +178,17 @@ func pick(point: Vector2) -> int:
 	return best
 
 
+## How many small bodies of each kind were drawn on screen last frame.
+func particles_drawn() -> Dictionary[Gravity.ParticleKind, int]:
+	return _drawn
+
+
+## A comet's tail on screen (from its head, in pixels), or zero when it has
+## none.
+func comet_tail(particle: int) -> Vector2:
+	return _tails.get(particle, Vector2.ZERO)
+
+
 ## Where a body is drawn on screen this frame.
 func screen_position(index: int) -> Vector2:
 	return _screen[index]
@@ -208,6 +242,7 @@ func _process(delta: float) -> void:
 	_layout(delta)
 	_hz.queue_redraw()
 	_orbits.queue_redraw()
+	_particles.queue_redraw()
 	_overlay.queue_redraw()
 
 
@@ -367,6 +402,75 @@ func _draw_local_arc(index: int, color: Color) -> void:
 	draw_dashed(_orbits, points, false, (t - LOCAL_ARC_SAMPLES * step) * pixels_per_year, color)
 
 
+## Belts and clouds as single pixels; comets with a dithered tail pointing
+## away from the star that lights them most, longer the closer they come.
+func _draw_particles() -> void:
+	var state: NBodyState = simulation.state
+	var view: PackedFloat64Array = state.p_view
+	var w: float = camera.viewport_size.x
+	var h: float = camera.viewport_size.y
+	var cx: float = camera.center_x
+	var cy: float = camera.center_y
+	var scale: float = camera.scale
+	var half_w: float = w * 0.5
+	var half_h: float = h * 0.5
+	var lines: Dictionary[Gravity.ParticleKind, PackedVector2Array] = {}
+	for kind: Gravity.ParticleKind in PARTICLE_COLORS:
+		lines[kind] = PackedVector2Array()
+	_drawn.clear()
+	_tails.clear()
+	_comet_heads.clear()
+	for p: int in state.particle_count():
+		if state.p_mode[p] == Gravity.ParticleMode.GONE:
+			continue
+		var x: float = floorf((view[p * 3] - cx) * scale + half_w)
+		var y: float = floorf((cy - view[p * 3 + 1]) * scale + half_h)
+		var kind: Gravity.ParticleKind = state.p_kind[p] as Gravity.ParticleKind
+		if kind == Gravity.ParticleKind.COMET:
+			_draw_comet(p, Vector2(x, y))
+		if x < 0.0 or x >= w or y < 0.0 or y >= h:
+			continue
+		# A one-pixel line through the pixel's centre lights just that pixel.
+		var points: PackedVector2Array = lines[kind]
+		points.append(Vector2(x, y + 0.5))
+		points.append(Vector2(x + 1.0, y + 0.5))
+		_drawn[kind] = _drawn.get(kind, 0) + 1
+	for kind: Gravity.ParticleKind in lines:
+		if not lines[kind].is_empty():
+			_particles.draw_multiline(lines[kind], Palette.color(PARTICLE_COLORS[kind]))
+
+
+func _draw_comet(p: int, head: Vector2) -> void:
+	var view: PackedFloat64Array = simulation.state.p_view
+	var x: float = view[p * 3]
+	var y: float = view[p * 3 + 1]
+	var z: float = view[p * 3 + 2]
+	_comet_heads[p] = head
+	var star: int = simulation.main_star_at(x, y, z)
+	if star < 0:
+		return
+	var dx: float = x - simulation.system.x(star)
+	var dy: float = y - simulation.system.y(star)
+	var distance: float = sqrt(dx * dx + dy * dy + pow(z - simulation.system.z(star), 2.0))
+	if distance >= TAIL_START_AU or distance <= 0.0:
+		return
+	var length: float = minf(TAIL_MAX_AU, TAIL_AT_1_AU / (distance * distance)) * camera.scale
+	var direction: Vector2 = Vector2(dx, -dy).normalized()
+	var tail: Vector2 = direction * length
+	_tails[p] = tail
+	if not Rect2(Vector2.ZERO, camera.viewport_size).grow(length).has_point(head):
+		return
+	var steps: int = mini(ceili(length), 2000)
+	for k: int in steps:
+		var along: float = float(k) / maxf(steps, 1)
+		# Thinner further out: every pixel near the head, then fewer.
+		if along > 0.33 and k % 2 == 1 or along > 0.66 and k % 3 != 0:
+			continue
+		var color: Color = Palette.color(TAIL_COLORS[mini(int(along * TAIL_COLORS.size()), TAIL_COLORS.size() - 1)])
+		_particles.draw_rect(Rect2((head + direction * k).floor(), Vector2.ONE), color)
+	_particles.draw_rect(Rect2(head, Vector2(2, 2)), Palette.color(&"white"))
+
+
 ## A dashed line with fixed on-screen dashes, whatever the zoom. Only the
 ## pieces near the screen are cut into dashes; the rest just advance the
 ## pattern. start shifts the pattern along the line.
@@ -457,6 +561,20 @@ func _draw_overlay() -> void:
 			color = Palette.color(&"ui_text_dim")
 		_overlay.draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_shadow"))
 		_overlay.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	# Named comets, after the bodies.
+	for name_key: String in simulation.particle_names:
+		var p: int = simulation.particle_names[name_key]
+		if not _comet_heads.has(p) or simulation.state.p_mode[p] == Gravity.ParticleMode.GONE:
+			continue
+		var text: String = tr(name_key)
+		var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		var at: Vector2 = _comet_heads[p] + Vector2(5.0, 4.0)
+		var box: Rect2 = Rect2(at + Vector2(-1, -9), Vector2(width + 2, 12))
+		if not view.encloses(box) or _covers(box, placed):
+			continue
+		placed.append(box)
+		_overlay.draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_shadow"))
+		_overlay.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_text_dim"))
 
 
 ## A removed or flung body still pulling where the news has not arrived: a
