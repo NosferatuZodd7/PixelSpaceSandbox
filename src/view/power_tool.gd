@@ -124,8 +124,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_place(_press_at, drag)
 		"fling":
 			if _target != -1 and drag.length() >= MIN_DRAG:
-				var v: PackedFloat64Array = _thrown_velocity(_target, drag, _aim_at(button.position, _target))
+				var aimed: int = _aim_at(button.position, _target)
+				var v: PackedFloat64Array = _thrown_velocity(_target, drag, aimed)
 				simulation.fling(_target, v[0], v[1], v[2], "FRONT_FLUNG")
+				if v.size() > 3 and not is_nan(v[3]):
+					simulation.expect_impact(_target, aimed, v[3])
 				used.emit(_power, _target)
 		"delete":
 			var target: int = view.pick(button.position)
@@ -183,20 +186,26 @@ func _place(at: Vector2, drag: Vector2) -> void:
 	var index: int = simulation.place_body(
 		body, launch[0], launch[1], launch[2], launch[3], launch[4], launch[5], "FRONT_PLACED"
 	)
+	if not is_nan(launch[7]):
+		simulation.expect_impact(index, int(launch[6]), launch[7])
 	used.emit(_power, index)
 
 
-## Where a new body starts and how it moves ([x, y, z, vx, vy, vz]) for a
-## press at a pixel and a drag: dropped onto the body under a click, thrown
-## at the body the drag ends on, else at the press point on a circular orbit
-## (or a flyby), or thrown along the drag.
+## Where a new body starts and how it moves for a press at a pixel and a
+## drag: dropped onto the body under a click, thrown at the body the drag
+## ends on, else at the press point on a circular orbit (or a flyby), or
+## thrown along the drag. [x, y, z, vx, vy, vz, the body aimed at or -1,
+## the moment (years) a throw at it should hit, else NAN].
 func _launch(at: Vector2, drag: Vector2, body: CelestialBody) -> PackedFloat64Array:
 	var target: int = view.pick(at + drag)
 	if target != -1 and drag.length() < MIN_DRAG:
-		return _drop_onto(target, at, body)
+		var drop: PackedFloat64Array = _drop_onto(target, at, body)
+		drop.append_array([target, NAN])
+		return drop
 	var point: PackedFloat64Array = _point_at(at)
-	var v: PackedFloat64Array = _new_velocity(point, drag, body.mass, target)
-	return PackedFloat64Array([point[0], point[1], point[2], v[0], v[1], v[2]])
+	var v: PackedFloat64Array = _new_velocity(point, drag, body, target)
+	var arrival: float = v[3] if v.size() > 3 else NAN
+	return PackedFloat64Array([point[0], point[1], point[2], v[0], v[1], v[2], target, arrival])
 
 
 ## A new body touching a body on the side clicked, falling onto it: they
@@ -220,8 +229,9 @@ func _drop_onto(target: int, at: Vector2, body: CelestialBody) -> PackedFloat64A
 
 ## The velocity of a new body at a point: on a circular orbit (or a flyby)
 ## when there is no drag, else along the drag around the same body, or
-## straight at the body the drag ends on.
-func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float, target: int = -1) -> PackedFloat64Array:
+## straight at the body the drag ends on (then followed by the moment it
+## should hit).
+func _new_velocity(point: PackedFloat64Array, drag: Vector2, body: CelestialBody, target: int = -1) -> PackedFloat64Array:
 	var base: PackedFloat64Array
 	var reference: int = simulation.dominant_body(point[0], point[1], point[2])
 	if _power.has("flyby_kms"):
@@ -230,23 +240,26 @@ func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float, target
 		while reference >= 0 and simulation.parent_of(reference) >= 0:
 			reference = simulation.parent_of(reference)
 	else:
-		base = simulation.circular_velocity(point[0], point[1], point[2], mass)
+		base = simulation.circular_velocity(point[0], point[1], point[2], body.mass)
 	if drag.length() < MIN_DRAG:
 		return base
 	if target != -1:
-		return simulation.intercept_velocity(target, point[0], point[1], point[2], _drag_speed(reference, base, drag), mass)
+		var speed: float = _drag_speed(reference, base, drag)
+		return simulation.intercept_velocity(target, point[0], point[1], point[2], speed, body.mass, body.radius)
 	return _along_drag(reference, base, drag)
 
 
 ## The velocity of a flung body: along the drag, relative to what it circles,
-## or straight at the body the drag ends on (target).
+## or straight at the body the drag ends on (target; then followed by the
+## moment it should hit, as Simulation.intercept_velocity gives it).
 func _thrown_velocity(index: int, drag: Vector2, target: int = -1) -> PackedFloat64Array:
 	var current: PackedFloat64Array = simulation.state.view_vel.slice(index * 3, index * 3 + 3)
 	if target != -1:
 		var speed: float = _drag_speed(simulation.parent_of(index), current, drag)
 		var b: int = index * 3
 		var pos: PackedFloat64Array = simulation.state.view_pos
-		return simulation.intercept_velocity(target, pos[b], pos[b + 1], pos[b + 2], speed, simulation.state.final_mass(index), index)
+		var state: NBodyState = simulation.state
+		return simulation.intercept_velocity(target, pos[b], pos[b + 1], pos[b + 2], speed, state.final_mass(index), state.radius[index], index)
 	return _along_drag(simulation.parent_of(index), current, drag)
 
 

@@ -141,6 +141,8 @@ UPDATE_ERROR_CHECKSUM,the download is damaged,o ficheiro veio danificado
 UPDATE_ERROR_FOLDER,the game's folder cannot be changed,a pasta do jogo não pode ser alterada
 UPDATE_ERROR_INSTALL,the files could not be swapped; nothing changed,não foi possível trocar os ficheiros; nada mudou
 NEWS_ARRIVES_IN,arrives in %s,chega daqui a %s
+IMPACT_IN,Impact in %s,Impacto em %s
+IMPACT_NOW,Impact any moment,Impacto iminente
 TIME_NEXT_ARRIVAL,Jump to when the news next arrives (N),Saltar para a próxima chegada da notícia (N)
 TIME_FOLLOW_WAVE,Follow the wave (G),Seguir a onda (G)
 TOOL_ORBITS,Orbits,Órbitas

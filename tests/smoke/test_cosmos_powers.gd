@@ -453,3 +453,55 @@ func test_a_black_hole_dropped_on_a_planet_stays_put() -> void:
 	var velocity: Vector3 = Vector3(simulation.state.vel[h], simulation.state.vel[h + 1], simulation.state.vel[h + 2])
 	var kms: float = Units.km_from_au((velocity - earth_velocity).length()) / Units.YEAR_SECONDS
 	assert_true(kms < 1.0, "it moves with the Earth (%.1f km/s apart)" % kms)
+
+
+## A body thrown at another says, next to it, how long until it hits; the
+## countdown runs with time and goes once they meet.
+func test_a_thrown_body_counts_down_to_its_impact() -> void:
+	var simulation: Simulation = _simulation()
+	var venus: int = _index(&"venus")
+	var earth: int = _index(&"earth")
+	await _choose("fling")
+	await _drag(_view.screen_position(venus), _view.screen_position(earth))
+	await wait_frames(1)
+	var label: String = _view.impact_labels().get(venus, "")
+	assert_true(label.begins_with("Impact in "), "a countdown next to Venus: \"%s\"" % label)
+	simulation.clock.use_preset("5")
+	simulation.clock.paused = false
+	await wait_frames(20)
+	var later: String = _view.impact_labels().get(venus, "")
+	assert_true(later.begins_with("Impact in ") and later != label, "it counts down: \"%s\", then \"%s\"" % [label, later])
+	var hit: bool = await wait_until(func() -> bool: return not simulation.is_present(venus), 6.0)
+	assert_true(hit, "Venus flies into the Earth")
+	await wait_frames(1)
+	assert_true(_view.impact_labels().is_empty(), "no countdown once they met: %s" % _view.impact_labels())
+
+
+## Next to a body at the right edge of the screen, the countdown goes to
+## its left rather than off the screen.
+func test_the_countdown_of_a_body_at_the_edge_stays_on_screen() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = _index(&"earth")
+	simulation.leave_pristine()
+	simulation.expect_impact(earth, _index(&"mars"), simulation.clock.time + 10.0 / Units.YEAR_DAYS)
+	_view.camera.set_scale_now(2000.0)
+	_view.camera.look_at(simulation.system.x(earth) - 300.0 / 2000.0, simulation.system.y(earth))
+	await wait_frames(2)
+	assert_true(_view.screen_position(earth).x > 600.0, "the Earth is at the right edge: %s" % _view.screen_position(earth))
+	assert_eq(_view.impact_labels().get(earth, ""), "Impact in 10 days")
+
+
+## Following a body that another takes in, the view follows what is left of
+## them, rather than the empty place where it was.
+func test_the_view_follows_what_takes_in_the_followed_body() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = await _watch_earth(2000.0)
+	await _choose("gas_giant")
+	var target: Vector2 = _view.screen_position(earth)
+	await _drag(target + Vector2(40, -30), target)
+	var giant: int = simulation.system.size() - 1
+	simulation.clock.paused = false
+	var hit: bool = await wait_until(func() -> bool: return not simulation.is_present(earth), 6.0)
+	assert_true(hit, "the giant takes the Earth in")
+	await wait_frames(1)
+	assert_eq(_view.followed, giant, "the view follows the giant")

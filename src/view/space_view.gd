@@ -96,6 +96,7 @@ var _elements: Array[PackedFloat64Array] = []
 var _changes_seen: int = -1
 ## Flashes where something collided: {"body", "age"} (real seconds).
 var _flashes: Array[Dictionary] = []
+var _impact_labels: Dictionary[int, String] = {}
 var _shake: float = 0.0
 var _restores_seen: int = 0
 var _orbits_drawn: int = 0
@@ -233,6 +234,11 @@ func particles_drawn() -> Dictionary[Gravity.ParticleKind, int]:
 ## none.
 func comet_tail(particle: int) -> Vector2:
 	return _tails.get(particle, Vector2.ZERO)
+
+
+## The countdowns to an expected impact drawn last frame, by thrown body.
+func impact_labels() -> Dictionary[int, String]:
+	return _impact_labels
 
 
 ## Where a body is drawn on screen this frame.
@@ -607,6 +613,7 @@ func _draw_overlay() -> void:
 		if _shown[i] == 1 and _sprites[i].visible:
 			var extent: float = ceilf(maxf(_radii[i], _sprites[i].extent_px))
 			placed.append(Rect2(_screen[i] - Vector2(extent, extent), Vector2(extent, extent) * 2.0))
+	_draw_impacts(placed)
 	_draw_fronts(placed)
 	var order: Array[int] = []
 	if selected != -1:
@@ -653,6 +660,31 @@ func _draw_overlay() -> void:
 		placed.append(box)
 		_overlay.draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_shadow"))
 		_overlay.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Palette.color(&"ui_text_dim"))
+
+
+## Under the name of a body thrown at another, how long until it hits.
+func _draw_impacts(placed: Array[Rect2]) -> void:
+	_impact_labels.clear()
+	var view: Rect2 = Rect2(Vector2.ZERO, camera.viewport_size)
+	var font: Font = UiTheme.body_font()
+	for impact: Dictionary in simulation.expected_impacts:
+		var i: int = impact["body"]
+		if i >= _shown.size() or _shown[i] == 0:
+			continue
+		var seconds: float = (float(impact["time"]) - simulation.clock.time) * Units.YEAR_SECONDS
+		var text: String = Format.tr_units("IMPACT_IN", Format.duration(seconds)) if seconds >= 1.0 else tr("IMPACT_NOW")
+		var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE).x
+		var reach: float = ceilf(maxf(_radii[i], _sprites[i].extent_px)) + 3.0
+		# Right of the body, under its name; at the right edge, to its left.
+		for at: Vector2 in [_screen[i] + Vector2(reach, 16.0), _screen[i] + Vector2(-reach - width, 16.0)]:
+			var box: Rect2 = Rect2(at + Vector2(-1, -9), Vector2(width + 2, 12))
+			if not view.encloses(box) or _covers(box, placed):
+				continue
+			placed.append(box)
+			_impact_labels[i] = text
+			_overlay.draw_string(font, at + Vector2.ONE, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, Palette.color(&"ui_shadow"))
+			_overlay.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.BODY_SIZE, Palette.color(&"ui_danger"))
+			break
 
 
 ## Each flash: a dithered burst of light growing from the body and fading.

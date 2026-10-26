@@ -63,6 +63,11 @@ var timeline: Timeline = null
 ## Counts the times the system was put back to a snapshot, so views know
 ## to start afresh.
 var restores: int = 0
+## Collisions the player aimed for: {"body": the thrown body, "target",
+## "time": the moment (years) it should hit, "since": when it was thrown}.
+## Each is forgotten once the two meet, a new throw makes it void, and one
+## that does not come is forgotten a while after its moment.
+var expected_impacts: Array[Dictionary] = []
 ## World law: how fast changes travel (AU per year). INF makes every change
 ## felt at once everywhere (the classic sandbox).
 var light_speed: float = Units.C
@@ -148,6 +153,7 @@ func advance(real_seconds: float) -> void:
 		_core.call(&"preview", state, clock.time)
 		_show_view()
 	_update_fronts()
+	_forget_impacts()
 
 
 ## World law: light this many times slower than in reality (1: real, INF:
@@ -191,6 +197,7 @@ func snapshot(label_key: String) -> Dictionary:
 		"label_key": label_key, "time": clock.time, "state": state.copy(), "bodies": bodies,
 		"positions": system.positions.duplicate(), "velocities": system.velocities.duplicate(),
 		"fronts": news, "particle_names": particle_names.duplicate(), "light_speed": light_speed,
+		"impacts": expected_impacts.duplicate(true),
 	}
 
 
@@ -206,6 +213,9 @@ func restore(snapshot: Dictionary) -> void:
 	for front: WaveFront in snapshot["fronts"]:
 		fronts.append(front.copy())
 	particle_names = (snapshot["particle_names"] as Dictionary[String, int]).duplicate()
+	expected_impacts.clear()
+	for impact: Dictionary in snapshot.get("impacts", []):
+		expected_impacts.append(impact.duplicate())
 	light_speed = snapshot["light_speed"]
 	clock.time = snapshot["time"]
 	alternative = null
@@ -296,6 +306,8 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 	if not is_present(index):
 		return
 	_record(label_key)
+	expected_impacts = expected_impacts.filter(
+		func(impact: Dictionary) -> bool: return impact["body"] != index and impact["target"] != index)
 	var drift: PackedFloat64Array = leave_pristine()
 	vx -= drift[0]
 	vy -= drift[1]
@@ -553,10 +565,11 @@ func predict_particle(
 ## at about a speed (AU/yr) relative to it: aimed where the target will be,
 ## with the pull of everything on the way (the kernel's prediction),
 ## corrected until the prediction hits. The thrown body is a new one of a
-## mass, or the body thrown (its index). For the powers that throw a body
-## at another.
+## mass and radius (AU), or the body thrown (its index). For the powers
+## that throw a body at another. Returns [vx, vy, vz, the moment it hits
+## (years)], that moment NAN when no correction made the prediction hit.
 func intercept_velocity(
-	target: int, x: float, y: float, z: float, speed: float, mass: float, thrown: int = -1
+	target: int, x: float, y: float, z: float, speed: float, mass: float, radius: float, thrown: int = -1
 ) -> PackedFloat64Array:
 	var b: int = target * 3
 	var to_target: Vector3 = Vector3(state.view_pos[b] - x, state.view_pos[b + 1] - y, state.view_pos[b + 2] - z)
@@ -569,16 +582,16 @@ func intercept_velocity(
 	var best_miss: float = INF
 	for attempt: int in INTERCEPT_ATTEMPTS:
 		var path: PackedFloat64Array = _predict_throw(target, x, y, z, aim, flight, mass, thrown)
-		var found: PackedFloat64Array = _intercept_correction(target, path, flight)
+		var found: PackedFloat64Array = _intercept_correction(target, path, flight, radius, to_target)
 		if found[3] <= 0.0:
-			return PackedFloat64Array([aim.x, aim.y, aim.z])
+			return PackedFloat64Array([aim.x, aim.y, aim.z, clock.time + found[4]])
 		if found[3] < best_miss:
 			best = aim
 			best_miss = found[3]
 			aim = best + Vector3(found[0], found[1], found[2])
 		else:
 			aim = best + (aim - best) * 0.5
-	return PackedFloat64Array([best.x, best.y, best.z])
+	return PackedFloat64Array([best.x, best.y, best.z, NAN])
 
 
 ## Where a target and a body thrown from a point go over a flight:
@@ -620,32 +633,90 @@ func _predict_throw(
 
 
 ## How a predicted throw misses its target, as [the change of velocity that
-## would bring it on, x, y, z, then the miss (AU), 0 when it hits]: the miss
-## at the end, or when the thrown body stopped short against something
-## else, spread over the time it took.
-func _intercept_correction(target: int, path: PackedFloat64Array, flight: float) -> PackedFloat64Array:
-	var hit: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0, 0.0])
+## would bring it on, x, y, z, then the miss (AU), 0 when it hits, then when
+## it hits (years into the flight)]. The thrown body (of a radius, AU)
+## starts at a gap from the target (from it to the target, AU); it hits
+## when its path passes well within reach of the target, or when it stopped
+## short against something else close to it. Else the miss at the end, or
+## where it stopped, spread over the time it took.
+func _intercept_correction(
+	target: int, path: PackedFloat64Array, flight: float, radius: float, start: Vector3
+) -> PackedFloat64Array:
 	var n: int = INTERCEPT_SAMPLES
+	var step_time: float = flight / n
 	var last: int = n - 1
 	while last >= 0 and is_nan(path[(n + last) * 3]):
 		last -= 1
 	if last < 0:
-		return hit
-	var target_at: Vector3 = Vector3(path[last * 3], path[last * 3 + 1], path[last * 3 + 2])
-	var thrown_at: Vector3 = Vector3(path[(n + last) * 3], path[(n + last) * 3 + 1], path[(n + last) * 3 + 2])
-	var miss: Vector3 = target_at - thrown_at
-	var elapsed: float = flight * (last + 1) / n
-	if last < n - 1:
+		return PackedFloat64Array([0.0, 0.0, 0.0, 0.0, step_time * 0.5])
+	var miss: Vector3 = _throw_gap(path, last)
+	var hits: bool = not is_nan(_contact_time(path, last, start, state.radius[target] * 0.5 + radius, step_time))
+	if not hits and last < n - 1:
 		# It touched something before the end: the target, if it was about
 		# to (within one sample's flight of it).
-		var before: int = (n + maxi(last - 1, 0)) * 3
-		var step: float = (thrown_at - Vector3(path[before], path[before + 1], path[before + 2])).length()
-		if miss.length() <= step * 1.5 + state.radius[target]:
-			return hit
-	elif miss.length() < state.radius[target] * 0.5:
-		return hit
-	var change: Vector3 = miss / elapsed
-	return PackedFloat64Array([change.x, change.y, change.z, miss.length()])
+		var b: int = (n + maxi(last - 1, 0)) * 3
+		var thrown_before: Vector3 = Vector3(path[b], path[b + 1], path[b + 2])
+		var step: float = (Vector3(path[(n + last) * 3], path[(n + last) * 3 + 1], path[(n + last) * 3 + 2]) - thrown_before).length()
+		hits = miss.length() <= step * 1.5 + state.radius[target]
+	if hits:
+		var when: float = _contact_time(path, last, start, state.radius[target] + radius, step_time)
+		return PackedFloat64Array([0.0, 0.0, 0.0, 0.0, step_time * (last + 1) if is_nan(when) else when])
+	var change: Vector3 = miss / (step_time * (last + 1))
+	return PackedFloat64Array([change.x, change.y, change.z, miss.length(), NAN])
+
+
+## From the thrown body to the target at a sample of a predicted throw.
+static func _throw_gap(path: PackedFloat64Array, sample: int) -> Vector3:
+	var t: int = sample * 3
+	var b: int = (INTERCEPT_SAMPLES + sample) * 3
+	return Vector3(path[t] - path[b], path[t + 1] - path[b + 1], path[t + 2] - path[b + 2])
+
+
+## When (years into the flight) a predicted throw first comes within reach
+## (AU) of its target, along straight lines between the start gap and the
+## samples up to the last; NAN when it never does.
+static func _contact_time(path: PackedFloat64Array, last: int, start: Vector3, reach: float, step_time: float) -> float:
+	var before: Vector3 = start
+	for k: int in last + 1:
+		var gap: Vector3 = _throw_gap(path, k)
+		# Where |before + (gap - before) s| = reach, s from 0 to 1.
+		var along: Vector3 = gap - before
+		var a: float = along.length_squared()
+		var b: float = 2.0 * before.dot(along)
+		var c: float = before.length_squared() - reach * reach
+		if c <= 0.0:
+			return step_time * k
+		var discriminant: float = b * b - 4.0 * a * c
+		if a > 0.0 and discriminant >= 0.0:
+			var s: float = (-b - sqrt(discriminant)) / (2.0 * a)
+			if s >= 0.0 and s <= 1.0:
+				return step_time * (k + s)
+		before = gap
+	return NAN
+
+
+## Remembers that a thrown body should hit a target at a moment (years),
+## in place of what was expected of it before.
+func expect_impact(body: int, target: int, time: float) -> void:
+	expected_impacts = expected_impacts.filter(func(impact: Dictionary) -> bool: return impact["body"] != body)
+	expected_impacts.append({"body": body, "target": target, "time": time, "since": clock.time})
+
+
+## The impact expected of a thrown body, or empty.
+func impact_of(body: int) -> Dictionary:
+	for impact: Dictionary in expected_impacts:
+		if impact["body"] == body:
+			return impact
+	return {}
+
+
+## Forgets impacts that came (one of the two is gone) or did not: a quarter
+## of the flight, and at least a day, after their moment.
+func _forget_impacts() -> void:
+	expected_impacts = expected_impacts.filter(func(impact: Dictionary) -> bool:
+		var time: float = impact["time"]
+		var late: float = maxf((time - float(impact["since"])) * 0.25, 1.0 / Units.YEAR_DAYS)
+		return is_present(impact["body"]) and is_present(impact["target"]) and clock.time <= time + late)
 
 
 ## Brightness (L☉) of a body as seen at a point now: light travels too.
@@ -810,6 +881,7 @@ func set_time(t: float) -> void:
 	_core.call(&"preview", state, t)
 	_show_view()
 	_update_fronts()
+	_forget_impacts()
 
 
 ## A body's Hill sphere around what it circles (INF at the top), from the

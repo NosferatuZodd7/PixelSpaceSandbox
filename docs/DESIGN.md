@@ -389,9 +389,19 @@ from the body at the committed moment:
   with the kernel (the thrown body with its mass; other planets' moons left
   out, as they only make the steps tiny), corrects the aim from where it
   misses up to eight times (taking back a correction that misses by more),
-  and arrives within a month at most. A click on a body drops the new body
-  onto it, touching it on the side clicked, with its share of the speed they
-  meet at (a black hole dropped on a planet barely moves).
+  and arrives within a month at most. The prediction hits when the path,
+  taken as straight lines between its samples, passes within half the
+  target's radius plus the thrown body's of the target; the moment it first
+  comes within both radii is when it hits. The simulation keeps that moment
+  (`expect_impact`, kept in snapshots) and the view writes "Impact in 12
+  days" in red under the thrown body's name (to its left at the right edge
+  of the screen). It is forgotten once one of the two is gone, when either
+  is flung again, or a quarter of the flight (at least a day) after the
+  moment if they missed. In playtests the real impact came within half an
+  hour of the moment shown. A click on a body drops the new body onto it,
+  touching it on the side clicked, with its share of the speed they meet at
+  (a black hole dropped on a planet barely moves). The camera following a
+  body that is taken in or torn apart follows what is left.
 - `fling`: the body keeps its index and gets the new velocity, from where
   it is at the last step (its ghost starts there too: a body would feel its
   own ghost hard at any distance); a ghost copy keeps the old path, mass and
@@ -610,3 +620,4 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 | 22 | No dithering in the sky backdrop: nebulae in flat bands of colour; the habitable zone as its two edges, without a fill (owner's request) | 2026-10 |
 | 23 | Builds only for code pushes to `main`/`beta`, tags and manual runs; documentation-only pushes and pull requests do not build (to save Actions minutes) | 2026-10 |
 | 24 | A drag released on a body throws into it (aimed with the kernel's prediction, arriving within a month); a click on a body drops onto it; drags are seen from the followed body | 2026-10 |
+| 25 | An aimed throw shows a countdown to its impact under the thrown body (owner's choice) | 2026-10 |

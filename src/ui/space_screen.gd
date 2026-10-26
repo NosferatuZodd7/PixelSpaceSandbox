@@ -100,6 +100,9 @@ func _announce_events() -> void:
 		if event["kind"] == "impact" and simulation.state.p_kind[event["particle"]] == Gravity.ParticleKind.DEBRIS:
 			continue
 		_view.flash(body, event["kind"] != "impact")
+		if event["kind"] != "impact" and _view.followed == int(event["other"]):
+			# The followed body was taken in or torn apart: follow what is left.
+			_view.follow(body)
 		var who: String = Format.body_name(system.body(body))
 		match str(event["kind"]):
 			"merge":

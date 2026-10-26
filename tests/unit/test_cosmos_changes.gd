@@ -379,10 +379,98 @@ func test_an_aimed_throw_hits_a_giant_soon() -> void:
 	giant.radius = Units.au_from_km(69911.0)
 	giant.luminosity = 0.0
 	var slow: float = Units.au_from_km(3.3) * Units.YEAR_SECONDS
-	var v: PackedFloat64Array = simulation.intercept_velocity(jupiter, x, y, z, slow, giant.mass)
+	var v: PackedFloat64Array = simulation.intercept_velocity(jupiter, x, y, z, slow, giant.mass, giant.radius)
 	var thrown: int = simulation.place_body(giant, x, y, z, v[0], v[1], v[2], "FRONT_PLACED")
 	var start: float = simulation.clock.time
 	simulation.clock.use_preset("5")
 	while simulation.is_present(thrown) and simulation.is_present(jupiter) and simulation.clock.time - start < 45.0 / Units.YEAR_DAYS:
 		simulation.advance(1.0 / 60.0)
 	assert_false(simulation.is_present(thrown) and simulation.is_present(jupiter), "they collided within 45 days")
+
+
+## A body thrown at a giant: the aim says when it should hit, the
+## simulation keeps that moment while the body is on its way, and it is
+## close to when they meet.
+func test_an_aimed_throw_knows_when_it_will_hit() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.advance(1.0 / 60.0)
+	var jupiter: int = simulation.system.index_of(&"jupiter")
+	var j: int = jupiter * 3
+	var x: float = simulation.state.view_pos[j] + 0.2
+	var y: float = simulation.state.view_pos[j + 1] + 0.1
+	var z: float = simulation.state.view_pos[j + 2]
+	var giant: CelestialBody = _sun_like_star()
+	giant.kind = CelestialBody.Kind.PLANET
+	giant.mass = Units.solar_masses_from_kg(318.0 * Units.EARTH_MASS_KG)
+	giant.radius = Units.au_from_km(69911.0)
+	giant.luminosity = 0.0
+	var slow: float = Units.au_from_km(3.3) * Units.YEAR_SECONDS
+	var v: PackedFloat64Array = simulation.intercept_velocity(jupiter, x, y, z, slow, giant.mass, giant.radius)
+	assert_eq(v.size(), 4, "a velocity and the moment it hits")
+	var expected: float = v[3]
+	assert_true(expected > simulation.clock.time, "a moment to come")
+	var thrown: int = simulation.place_body(giant, x, y, z, v[0], v[1], v[2], "FRONT_PLACED")
+	simulation.expect_impact(thrown, jupiter, expected)
+	simulation.clock.use_preset("5")
+	simulation.advance(1.0 / 60.0)
+	assert_eq(simulation.impact_of(thrown).get("target", -1), jupiter, "kept while it is on its way")
+	var start: float = simulation.clock.time
+	while simulation.is_present(thrown) and simulation.is_present(jupiter) and simulation.clock.time - start < 45.0 / Units.YEAR_DAYS:
+		simulation.advance(1.0 / 60.0)
+	var off_days: float = absf(simulation.clock.time - expected) * Units.YEAR_DAYS
+	assert_true(off_days < 1.0, "it hit within a day of the moment expected (%.2f days off)" % off_days)
+	assert_true(simulation.impact_of(thrown).is_empty(), "forgotten once they met")
+
+
+## An expected impact that does not come is forgotten a while after its
+## moment, a new throw of the body replaces it, and going back in time
+## forgets it too.
+func test_an_impact_that_does_not_come_is_forgotten() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.leave_pristine()
+	var earth: int = simulation.system.index_of(&"earth")
+	var mars: int = simulation.system.index_of(&"mars")
+	var before: Dictionary = simulation.snapshot("FRONT_FLUNG")
+	simulation.expect_impact(mars, earth, simulation.clock.time + 4.0 / Units.YEAR_DAYS)
+	simulation.clock.use_preset("4")
+	for frame: int in 270:
+		simulation.advance(1.0 / 60.0)
+	assert_false(simulation.impact_of(mars).is_empty(), "kept a little past its moment (4.5 days in)")
+	for frame: int in 120:
+		simulation.advance(1.0 / 60.0)
+	assert_true(simulation.impact_of(mars).is_empty(), "forgotten 6.5 days in")
+	simulation.expect_impact(mars, earth, simulation.clock.time + 4.0 / Units.YEAR_DAYS)
+	var m: int = mars * 3
+	simulation.fling(mars, simulation.state.vel[m], simulation.state.vel[m + 1] * 1.1, 0.0, "FRONT_FLUNG")
+	assert_true(simulation.impact_of(mars).is_empty(), "a new throw makes it void")
+	simulation.expect_impact(mars, earth, simulation.clock.time + 4.0 / Units.YEAR_DAYS)
+	simulation.restore(before)
+	assert_true(simulation.impact_of(mars).is_empty(), "and so does going back")
+
+
+## A giant thrown at the Earth from close by touches it with its own edge,
+## well before their centres would meet: the aim still knows it hits, and
+## when.
+func test_a_giant_thrown_at_a_small_planet_knows_when_it_hits() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.advance(1.0 / 60.0)
+	var earth: int = simulation.system.index_of(&"earth")
+	var e: int = earth * 3
+	var x: float = simulation.state.view_pos[e] + 0.02
+	var y: float = simulation.state.view_pos[e + 1] + 0.015
+	var z: float = simulation.state.view_pos[e + 2]
+	var giant: CelestialBody = _sun_like_star()
+	giant.kind = CelestialBody.Kind.PLANET
+	giant.mass = Units.solar_masses_from_kg(318.0 * Units.EARTH_MASS_KG)
+	giant.radius = Units.au_from_km(69911.0)
+	giant.luminosity = 0.0
+	var v: PackedFloat64Array = simulation.intercept_velocity(earth, x, y, z, 7.0, giant.mass, giant.radius)
+	assert_false(is_nan(v[3]), "it knows it hits")
+	var thrown: int = simulation.place_body(giant, x, y, z, v[0], v[1], v[2], "FRONT_PLACED")
+	simulation.clock.use_preset("3")
+	var start: float = simulation.clock.time
+	while simulation.is_present(thrown) and simulation.is_present(earth) and simulation.clock.time - start < 10.0 / Units.YEAR_DAYS:
+		simulation.advance(1.0 / 60.0)
+	assert_false(simulation.is_present(thrown) and simulation.is_present(earth), "they collided")
+	var off_hours: float = absf(simulation.clock.time - v[3]) * Units.YEAR_DAYS * 24.0
+	assert_true(off_hours < 3.0, "it hit within 3 hours of the moment expected (%.1f hours off)" % off_hours)
