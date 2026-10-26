@@ -505,3 +505,21 @@ func test_the_view_follows_what_takes_in_the_followed_body() -> void:
 	assert_true(hit, "the giant takes the Earth in")
 	await wait_frames(1)
 	assert_eq(_view.followed, giant, "the view follows the giant")
+
+
+## A right drag cut short by the menu (released while it was open) does not
+## leave the view panning with the mouse afterwards.
+func test_a_drag_cut_short_by_the_menu_does_not_stick() -> void:
+	_button(Vector2(320, 180), true, MOUSE_BUTTON_RIGHT)
+	_screen.call(&"open_menu")
+	_button(Vector2(320, 180), false, MOUSE_BUTTON_RIGHT)
+	_screen.call(&"close_menu")
+	await wait_frames(1)
+	var x: float = _view.camera.center_x
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.position = Vector2(360, 200)
+	motion.global_position = motion.position
+	motion.relative = Vector2(40, 20)
+	tree.root.push_input(motion)
+	await wait_frames(1)
+	assert_eq(_view.camera.center_x, x, "moving the mouse with no button held does not pan")

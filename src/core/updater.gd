@@ -49,6 +49,8 @@ static func install_dir() -> String:
 func _ready() -> void:
 	_http = HTTPRequest.new()
 	_http.timeout = 30.0
+	# One chunk is read per frame: 64 KiB (the default) caps a download at about 4 MB/s.
+	_http.download_chunk_size = 1 << 20
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
 	if not supported():
@@ -76,9 +78,12 @@ func _process(_delta: float) -> void:
 			state_changed.emit()
 
 
-## Looks for a newer build (does nothing when disabled or the channel is off).
+## Looks for a newer build (does nothing when disabled, the channel is off,
+## or a check, download or install is under way).
 func check() -> void:
-	if state == State.DISABLED or state == State.CHECKING or channel == UpdateChecker.Channel.OFF:
+	if state in [State.DISABLED, State.CHECKING, State.DOWNLOADING, State.INSTALLING, State.RESTARTING]:
+		return
+	if channel == UpdateChecker.Channel.OFF:
 		return
 	_set_state(State.CHECKING)
 	_http.set_meta(&"step", "releases")

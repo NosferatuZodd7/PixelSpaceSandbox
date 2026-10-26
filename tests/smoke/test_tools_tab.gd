@@ -178,3 +178,26 @@ func _press_action(action: StringName) -> void:
 	event.action = action
 	event.pressed = true
 	tree.root.push_input(event)
+
+
+## With the world laws panel open, the arrow keys change the law in focus
+## and leave the camera alone, and Space still pauses without changing a law.
+func test_keys_in_the_world_laws_panel_do_not_move_the_camera() -> void:
+	await _open_tools()
+	await _press("world_laws")
+	var x: float = _view.camera.center_x
+	var y: float = _view.camera.center_y
+	Input.action_press(&"pan_right")
+	await wait_frames(10)
+	Input.action_release(&"pan_right")
+	assert_eq(_view.camera.center_x, x, "the camera stays put")
+	assert_eq(_view.camera.center_y, y)
+	var paused: bool = _simulation().clock.paused
+	var space: InputEventKey = InputEventKey.new()
+	space.keycode = KEY_SPACE
+	space.physical_keycode = KEY_SPACE
+	space.pressed = true
+	tree.root.push_input(space)
+	await wait_frames(1)
+	assert_eq(_simulation().clock.paused, not paused, "Space pauses or resumes")
+	assert_eq(_simulation().light_speed, Units.C, "and changes no law")

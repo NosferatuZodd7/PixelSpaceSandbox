@@ -144,3 +144,13 @@ func test_long_notices_stay_in_their_corner() -> void:
 			var width: float = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size(&"font_size")).x
 			var text_rect: Rect2 = Rect2(label.get_global_rect().get_center() - Vector2(width * 0.5, label.size.y * 0.5), Vector2(width, label.size.y))
 			assert_false(rect.intersects(text_rect), "%s: '%s' at %s runs into '%s' at %s" % [locale, entry.text, rect, label.text, text_rect])
+
+
+## The toolbar is a panel like the others: the palette's colours and hard
+## pixel edges, not the engine's default grey rounded box.
+func test_the_toolbar_panel_is_drawn_like_the_others() -> void:
+	var panel: StyleBoxFlat = _toolbar.get_theme_stylebox(&"panel") as StyleBoxFlat
+	assert_eq(panel.bg_color, Palette.color(&"ui_panel"))
+	assert_eq(panel.border_color, Palette.color(&"ui_border"))
+	assert_eq(panel.corner_radius_top_left, 0, "square corners")
+	assert_false(panel.anti_aliasing, "hard pixel edges")

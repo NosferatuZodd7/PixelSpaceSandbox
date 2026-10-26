@@ -46,7 +46,8 @@ func _ready() -> void:
 	for power: Dictionary in _powers:
 		if power["action"] == "overlay":
 			overlays[StringName(str(power["overlay"]))] = bool(power.get("on", false))
-	var panel: StyleBoxFlat = get_theme_stylebox(&"panel").duplicate()
+	# From the shared theme: the screen sets it on its UI only after its children are ready.
+	var panel: StyleBoxFlat = UiTheme.shared().get_stylebox(&"panel", &"PanelContainer").duplicate()
 	panel.content_margin_left = 6
 	panel.content_margin_right = 6
 	panel.content_margin_top = 4

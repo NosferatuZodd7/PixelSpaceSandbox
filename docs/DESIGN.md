@@ -306,8 +306,9 @@ M1). The first change to the system calls `leave_pristine()`: every body
 starts integrating from exactly where its orbit put it, with velocities
 shifted so the system's centre of mass is at rest. Each frame asks the
 kernel to reach the shown moment within a budget (4,000 steps, 6 ms); if
-it cannot, the clock waits for it and the counter says the simulation
-cannot keep up. At high speeds moons whose orbits would need more than
+it cannot, the clock waits for it and the counter says how fast time
+really goes ("the simulation only manages 20 days per second", smoothed
+over the last tenths of a second). At high speeds moons whose orbits would need more than
 about 60 steps per frame ride rails around their planet (Phobos at one
 week per second; every moon but ours and the outermost at one year per
 second), and come back to full integration when time slows down. A body
@@ -451,8 +452,12 @@ pairs with how close they came (`collision_gaps`).
   arrives both pull on as ghosts on their old paths, so the far field does
   not jump.
 - inside the Roche limit: the lighter body is torn into a ring around the
-  heavier one (dust, ice when it was light, glowing gas for a star), whose
-  mass and momentum the material joins without making it bigger.
+  heavier one, whose mass and momentum the material joins without making
+  it bigger. A planet or moon leaves three bands laid out like Saturn's
+  (`Simulation.RING_BANDS`: a faint inner band, a dense middle one, a gap
+  like the Cassini division, then the outer band) in Saturn's dust, sand
+  and desert colours, or ice and snow when it was light; a star leaves one
+  band of glowing gas.
 
 Each is reported in `Simulation.events` for notifications. A merger also
 throws up 24 pieces of massless debris from just above the merged body's
@@ -551,6 +556,9 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
   when the title screen opens; on request it downloads the zip next to the
   game, checks its SHA-256 against the published one (no checksum, no
   install), and hands it to `UpdateInstaller`, then starts the new version.
+  It reads up to 1 MiB a frame (the engine's 64 KiB default capped a
+  download at about 4 MB/s), and a check asked for while it downloads or
+  installs (a new channel chosen in Settings) waits.
 - `UpdateInstaller` unpacks into `.update/` first (a broken download changes
   nothing), then moves each running file aside as `<name>.old` (Windows can
   rename a running program and its loaded library, not overwrite them) and

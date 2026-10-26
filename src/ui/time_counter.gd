@@ -2,7 +2,7 @@ class_name TimeCounter
 extends VBoxContainer
 ## The big pixel time counter at the top of the screen: the date (or the
 ## year, far from today), and below it the speed ("x86 400 · 1 day/s") or
-## PAUSED, and a warning when the simulation cannot keep up with it.
+## PAUSED, and when the simulation cannot keep up, how fast time really goes.
 
 ## Above this speed (simulated seconds per real second) the clock shows
 ## only the date, since hours and minutes would just flicker.
@@ -16,6 +16,10 @@ var simulation: Simulation
 var _date: Label
 var _speed: Label
 var _since_refresh: float = 0.0
+## How fast time really went (simulated seconds per real second), smoothed:
+## said when the simulation cannot keep up with the chosen speed.
+var _reached: float = 0.0
+var _last_time: float = NAN
 
 
 func _ready() -> void:
@@ -36,6 +40,9 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_since_refresh += delta
 	if clock != null and _since_refresh >= REFRESH_SECONDS:
+		if not is_nan(_last_time):
+			_reached = lerpf(_reached, maxf(clock.time - _last_time, 0.0) * Units.YEAR_SECONDS / _since_refresh, 0.5)
+		_last_time = clock.time
 		_since_refresh = 0.0
 		refresh()
 
@@ -49,7 +56,7 @@ func refresh() -> void:
 		_speed.text = "%s  ·  %s" % [Format.multiplier(clock.speed()), speed_words(clock.speed())]
 		_speed.theme_type_variation = &"DimLabel"
 		if simulation != null and simulation.lagging:
-			_speed.text += "  ·  " + tr("TIME_LAGGING")
+			_speed.text += "  ·  " + Format.tr_units("TIME_LAGGING", Format.duration(_reached))
 			_speed.theme_type_variation = &"KeyLabel"
 
 

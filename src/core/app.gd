@@ -6,6 +6,8 @@ var settings: GameSettings = GameSettings.new()
 
 
 func _ready() -> void:
+	# Below the base size the integer scale stays at 1 and the edges are cut off.
+	get_window().min_size = Vector2i(640, 360)
 	InputBindings.apply()
 	settings.read()
 	settings.apply()

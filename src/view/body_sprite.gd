@@ -25,6 +25,8 @@ var _body: CelestialBody
 var _map: ImageTexture
 var _disc: ShaderMaterial
 var _glow: Node2D
+static var _maps: Dictionary[String, ImageTexture] = {}
+
 var _rings: Array[Node2D] = []
 var _ring_rotation: float = 0.0
 var _ring_flatten: float = 1.0
@@ -45,7 +47,12 @@ func setup(body: CelestialBody, body_index: int, map_seed: int) -> void:
 	_body = body
 	index = body_index
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_map = ImageTexture.create_from_image(SurfaceMaps.generate(body.look, map_seed))
+	# The same look and seed draw the same map: paint each once (going back
+	# in time rebuilds every sprite).
+	var key: String = "%s %d" % [body.look, map_seed]
+	if not _maps.has(key):
+		_maps[key] = ImageTexture.create_from_image(SurfaceMaps.generate(body.look, map_seed))
+	_map = _maps[key]
 	_disc = ShaderMaterial.new()
 	_disc.shader = DISC_SHADER
 	_disc.set_shader_parameter(&"night_color", Palette.color(&"void"))

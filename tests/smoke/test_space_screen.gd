@@ -129,8 +129,11 @@ func test_the_counter_says_when_the_game_cannot_keep_up() -> void:
 	await wait_frames(4)
 	var counter: TimeCounter = _screen.get_node("UI/Root/TimeCounter")
 	assert_true(simulation.lagging, "the simulation is behind")
-	var says_so: bool = await wait_until(func() -> bool: return counter.speed_text().contains(tr("TIME_LAGGING")), 1.0)
+	# It says how fast time really goes then (one step a frame: hours a second).
+	var says_so: bool = await wait_until(func() -> bool: return counter.speed_text().contains("only manages"), 1.0)
 	assert_true(says_so, "the counter says so: %s" % counter.speed_text())
+	var really: String = counter.speed_text().get_slice("only manages", 1)
+	assert_false(really.contains("year") or really.contains(" 0 s"), "with the speed reached: %s" % counter.speed_text())
 
 
 func test_clicking_a_planet_opens_an_inspect_window() -> void:
@@ -300,3 +303,19 @@ func _power(id: String) -> Dictionary:
 		if power["id"] == id:
 			return power
 	return {}
+
+
+## Going back in time redraws every body afresh, but quickly: the surface
+## maps, the same for the same body, are not painted again (it froze the
+## game for a tenth of a second at each undo).
+func test_going_back_redraws_the_bodies_without_a_freeze() -> void:
+	var simulation: Simulation = _simulation()
+	var moment: Dictionary = simulation.snapshot("FRONT_PLACED")
+	var worst: float = 0.0
+	for attempt: int in 3:
+		var started: int = Time.get_ticks_usec()
+		simulation.restore(moment)
+		_view.call(&"_sync_bodies")
+		worst = maxf(worst, (Time.get_ticks_usec() - started) / 1000.0)
+		await wait_frames(1)
+	assert_true(worst < 50.0, "back in time and every body redrawn in %.0f ms" % worst)

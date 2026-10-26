@@ -172,11 +172,13 @@ func test_a_moon_inside_the_roche_limit_becomes_a_ring() -> void:
 		simulation.advance(1.0 / 60.0)
 	assert_false(simulation.is_present(moon), "the moon is torn apart")
 	var rings: Array[Dictionary] = simulation.system.body(earth).rings
-	assert_eq(rings.size(), 1, "into a ring around the Earth")
-	if rings.size() == 1:
-		var middle: float = Units.km_from_au(0.5 * (float(rings[0]["inner"]) + float(rings[0]["outer"])))
+	assert_eq(rings.size(), 3, "into rings around the Earth, banded like Saturn's")
+	if rings.size() == 3:
+		var middle: float = Units.km_from_au(0.5 * (float(rings[0]["inner"]) + float(rings[2]["outer"])))
 		assert_almost_eq(middle, 9000.0, 1500.0, "where it was (%s km)" % middle)
 		assert_true(float(rings[0]["inner"]) > simulation.state.radius[earth], "above the surface")
+		assert_true(float(rings[2]["inner"]) > float(rings[1]["outer"]), "with a gap, like Saturn's Cassini division")
+		assert_true(float(rings[1]["density"]) > float(rings[0]["density"]), "the middle band the densest")
 	assert_almost_eq(simulation.state.final_mass(earth), mass, 1e-20, "its mass stays with the Earth, as a ring")
 	assert_almost_eq(Units.km_from_au(simulation.state.radius[earth]), 6371.0, 1e-6, "the Earth itself does not grow")
 	var torn: bool = false

@@ -105,7 +105,7 @@ TIME_PAUSED,PAUSED  ·  Space to resume,PAUSA  ·  Espaço para continuar
 TIME_SLOW_MOTION,slow motion,câmara lenta
 TIME_REAL,real time,tempo real
 TIME_PER_SECOND,%s per second,%s por segundo
-TIME_LAGGING,the simulation cannot keep up,a simulação não acompanha
+TIME_LAGGING,the simulation only manages %s per second,a simulação só consegue %s por segundo
 TIME_SLOWER,Slower (−),Mais devagar (−)
 TIME_FASTER,Faster (+),Mais depressa (+)
 TIME_PAUSE,Pause (Space),Pausa (Espaço)

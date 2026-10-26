@@ -812,7 +812,8 @@ func _draw_brackets(center: Vector2, half: int, color: Color) -> void:
 
 
 func _pan_with_keys(delta: float) -> void:
-	if not accepts_input:
+	# Keys go to a control with the focus (a world law row) instead.
+	if not accepts_input or get_viewport().gui_get_focus_owner() != null:
 		return
 	var direction: Vector2 = Input.get_vector(&"pan_left", &"pan_right", &"pan_up", &"pan_down")
 	if direction != Vector2.ZERO:
@@ -829,6 +830,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var motion: InputEventMouseMotion = event as InputEventMouseMotion
 	if motion != null:
+		# A release can be missed (the menu was open): no button, no drag.
+		_dragging = _dragging and motion.button_mask & (MOUSE_BUTTON_MASK_RIGHT | MOUSE_BUTTON_MASK_MIDDLE) != 0
 		if _dragging:
 			followed = -1
 			camera.pan_pixels(motion.relative)

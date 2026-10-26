@@ -157,6 +157,18 @@ func test_a_newer_build_is_offered_on_the_title_screen() -> void:
 	assert_eq(updater.state, Updater.State.UP_TO_DATE)
 
 
+## Changing the update channel while a new version downloads (the title
+## screen checks again then) does not cut the download short.
+func test_a_check_does_not_interrupt_a_download() -> void:
+	var updater: Updater = (_main.get_node("UI/Root/UpdateNotice") as UpdateNotice).updater
+	updater.channel = UpdateChecker.Channel.TESTING
+	for busy: Updater.State in [Updater.State.DOWNLOADING, Updater.State.INSTALLING, Updater.State.RESTARTING]:
+		updater.state = busy
+		updater.check()
+		assert_eq(updater.state, busy, "still %s" % Updater.State.keys()[busy])
+	updater.state = Updater.State.DISABLED
+
+
 ## The longest update message, with its button, fits on screen in both
 ## languages without running into the version line.
 func test_an_update_failure_fits_beside_the_version() -> void:

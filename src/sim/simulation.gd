@@ -24,6 +24,10 @@ const INTERCEPT_SAMPLES: int = 16
 ## An aimed throw arrives within this time (years) at most, faster than the
 ## drag asks when needed: long, slow arcs are hard to aim and dull to wait for.
 const INTERCEPT_MAX_FLIGHT: float = 30.0 / Units.YEAR_DAYS
+## The ring a torn planet or moon leaves, banded like Saturn's: each band's
+## start and end (shares of the ring's width) and how dense it is, with a
+## gap like the Cassini division.
+const RING_BANDS: Array[Vector3] = [Vector3(0.0, 0.28, 0.3), Vector3(0.28, 0.69, 0.85), Vector3(0.77, 1.0, 0.6)]
 
 var system: StarSystem
 var clock: SimClock
@@ -944,19 +948,24 @@ func _tear_apart(primary: int, satellite: int) -> void:
 	var dz: float = state.view_pos[b + 2] - state.view_pos[q + 2]
 	var distance: float = sqrt(dx * dx + dy * dy + dz * dz)
 	var torn: CelestialBody = system.body(satellite)
-	var color: StringName = &"dust"
+	var colors: Array[StringName] = [&"dust", &"sand", &"desert"]
+	var bands: Array[Vector3] = RING_BANDS
 	if torn.is_star():
-		color = &"accretion"
+		colors = [&"accretion"]
+		bands = [Vector3(0.0, 1.0, 0.5)]
 	elif torn.radius > 0.0:
 		var radius_m: float = Units.km_from_au(torn.radius) * 1000.0
 		var density: float = Units.kg_from_solar_masses(state.final_mass(satellite)) / (4.0 / 3.0 * PI * pow(radius_m, 3.0))
 		if density < 2000.0:
-			color = &"ice"
+			colors = [&"ice", &"snow", &"ice"]
 	_absorb(primary, satellite, "FRONT_TORN", satellite, false)
-	system.body(primary).rings.append({
-		"inner": maxf(0.8 * distance, 1.1 * state.radius[primary]), "outer": maxf(1.2 * distance, 1.3 * state.radius[primary]),
-		"color": color, "density": 0.5,
-	})
+	var inner: float = maxf(0.8 * distance, 1.1 * state.radius[primary])
+	var width: float = maxf(1.2 * distance, 1.3 * state.radius[primary]) - inner
+	for k: int in bands.size():
+		system.body(primary).rings.append({
+			"inner": inner + bands[k].x * width, "outer": inner + bands[k].y * width,
+			"color": colors[k], "density": bands[k].z,
+		})
 	events.append({"kind": "disrupt", "body": primary, "other": satellite, "time": state.time})
 
 

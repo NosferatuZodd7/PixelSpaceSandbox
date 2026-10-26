@@ -61,7 +61,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_left", true):
 		step(-1)
 		accept_event()
-	elif event.is_action_pressed(&"ui_right", true) or event.is_action_pressed(&"ui_accept"):
+	elif event.is_action_pressed(&"ui_right", true):
 		step(1)
 		accept_event()
 
