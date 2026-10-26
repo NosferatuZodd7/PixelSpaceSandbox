@@ -270,3 +270,33 @@ func test_a_comet_near_the_sun_grows_a_tail_away_from_it() -> void:
 	assert_true(tail.length() > 10.0, "near the Sun its tail is long (%s px)" % tail.length())
 	var head: Vector2 = Vector2(simulation.state.p_view[halley * 3], -simulation.state.p_view[halley * 3 + 1])
 	assert_true(tail.normalized().dot(head.normalized()) > 0.95, "and points away from the Sun")
+
+
+## Rings follow a planet drawn larger than life, but a ring far out from a
+## tiny body (a planet torn apart around a black hole) stays near its disc
+## instead of filling the screen.
+func test_rings_far_out_stay_near_the_drawn_body() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.clock.paused = true
+	var saturn: int = _index(&"saturn")
+	var saturn_sprite: BodySprite = _view.get_node("Bodies").get_child(saturn)
+	_view.follow(saturn)
+	await wait_frames(3)
+	var saturn_extent: float = saturn_sprite.extent_px
+	assert_true(saturn_extent > saturn_sprite.radius_px * 1.8, "Saturn's rings show beside the drawn planet")
+	var hole: CelestialBody = PowerCatalog.make_body(_power("black_hole"), simulation.system)
+	var earth: int = _index(&"earth")
+	var e: int = earth * 3
+	var index: int = simulation.place_body(hole, simulation.state.view_pos[e] + 0.3, simulation.state.view_pos[e + 1], 0.0, 0.0, 0.0, 0.0, "FRONT_PLACED")
+	simulation.system.body(index).rings.append({"inner": 0.001, "outer": 0.0015, "color": &"accretion", "density": 0.5})
+	_view.follow(index)
+	await wait_frames(3)
+	var sprite: BodySprite = _view.get_node("Bodies").get_child(index)
+	assert_true(sprite.extent_px <= sprite.radius_px * 4.0 + 1.0, "a ring 0.0015 AU out stays near the black hole: %s px for a %d px disc" % [sprite.extent_px, sprite.radius_px])
+
+
+func _power(id: String) -> Dictionary:
+	for power: Dictionary in (PowerCatalog.load_file() as Dictionary)["powers"]:
+		if power["id"] == id:
+			return power
+	return {}

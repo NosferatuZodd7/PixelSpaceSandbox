@@ -13,6 +13,9 @@ const STAR_COLORS: Array[Array] = [
 	[5200.0, &"star_g"], [3700.0, &"star_k"], [0.0, &"star_m"],
 ]
 
+## Drawn larger than life, rings reach at most this many drawn radii out.
+const RING_REACH: float = 4.0
+
 var index: int = -1
 var radius_px: int = 2
 ## How far from the centre the drawing reaches (disc, rings or glow), in pixels.
@@ -83,8 +86,9 @@ func _build_rings() -> void:
 			_rings.append(front)
 
 
-## Updates the drawing for this frame. light_dir points to the star on screen.
-func update_view(new_radius: int, light_dir: Vector2, spin: float) -> void:
+## Updates the drawing for this frame. light_dir points to the star on
+## screen; true_scale is the camera's pixels per AU.
+func update_view(new_radius: int, light_dir: Vector2, spin: float, true_scale: float = 0.0) -> void:
 	if _rings_built_for != Vector2(_body.rings.size(), _body.radius):
 		_build_rings()
 	radius_px = new_radius
@@ -101,8 +105,16 @@ func update_view(new_radius: int, light_dir: Vector2, spin: float) -> void:
 		_glow.queue_redraw()
 		extent_px = radius_px * 2.0 + 4.0
 	if not _rings.is_empty():
-		# Rings scale with the drawn planet, which may be larger than life.
+		# Rings scale with the drawn planet, which may be larger than life,
+		# but reach at most RING_REACH times its drawn radius (a ring far
+		# out around a tiny body, such as a black hole) unless they are that
+		# big at true scale.
+		var outermost: float = 0.0
+		for node: Node2D in _rings:
+			outermost = maxf(outermost, float((node.get_meta(&"ring") as Dictionary)["outer"]))
 		var pixels_per_au: float = radius_px / _body.radius
+		if outermost > 0.0:
+			pixels_per_au = maxf(minf(pixels_per_au, RING_REACH * radius_px / outermost), true_scale)
 		for node: Node2D in _rings:
 			var ring: Dictionary = node.get_meta(&"ring")
 			var ring_material: ShaderMaterial = node.material as ShaderMaterial

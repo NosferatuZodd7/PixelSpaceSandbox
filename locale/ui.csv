@@ -139,7 +139,7 @@ UPDATE_OPEN_PAGE,Open the page,Abrir a página
 UPDATE_ERROR_NETWORK,no connection,sem ligação
 UPDATE_ERROR_CHECKSUM,the download is damaged,o ficheiro veio danificado
 UPDATE_ERROR_FOLDER,the game's folder cannot be changed,a pasta do jogo não pode ser alterada
-UPDATE_ERROR_INSTALL,the files could not be replaced,não foi possível substituir os ficheiros
+UPDATE_ERROR_INSTALL,the files could not be swapped; nothing changed,não foi possível trocar os ficheiros; nada mudou
 NEWS_ARRIVES_IN,arrives in %s,chega daqui a %s
 TIME_NEXT_ARRIVAL,Jump to when the news next arrives (N),Saltar para a próxima chegada da notícia (N)
 TIME_FOLLOW_WAVE,Follow the wave (G),Seguir a onda (G)
@@ -179,7 +179,7 @@ LAW_ON,On,Ligadas
 LAW_OFF,Off,Desligadas
 LAW_GRAVITY,Gravity,Gravidade
 NOTE_MERGE,%s and %s collided,%s e %s colidiram
-NOTE_TORN,%s was torn into a ring around %s,%s foi desfeito num anel à volta de %s
+NOTE_TORN,%s was torn into a ring around %s,%s desfez-se num anel à volta de %s
 NOTE_IMPACT_NAMED,%s struck %s,%s atingiu %s
 NOTE_IMPACT_COMET,A comet struck %s,Um cometa atingiu %s
 NOTE_IMPACT,A small body struck %s,Um pequeno corpo atingiu %s
@@ -211,6 +211,7 @@ POWER_FLING,Fling,Atirar
 POWER_DELETE,Delete,Apagar
 POWER_PLACE_HINT,Click: circular orbit · drag: throw,Clica: órbita circular · arrasta: lança
 POWER_ROGUE_HINT,Click: it sweeps through here · drag: aim,Clica: passa por aqui · arrasta: aponta
+POWER_AIM_HINT,Release on a body: it hits it,Largar sobre um corpo: choca com ele
 POWER_FLING_HINT,Drag a body to throw it,Arrasta um corpo para o atirar
 POWER_DELETE_HINT,Click a body to remove it,Clica num corpo para o apagar
 PLACED_STAR,Star %s,Estrela %s
@@ -222,7 +223,7 @@ FRONT_PLACED,%s appeared,%s apareceu
 FRONT_REMOVED,%s vanished,%s desapareceu
 FRONT_FLUNG,%s changed course,%s mudou de rumo
 FRONT_MERGED,Collision: %s,Colisão: %s
-FRONT_TORN,%s torn into a ring,%s desfeito num anel
+FRONT_TORN,%s torn into a ring,%s desfez-se num anel
 VIEW_FOLLOWING,Following %s,A seguir: %s
 VIEW_FOLLOWING_WAVE,FOLLOWING THE WAVE,A SEGUIR A ONDA
 VIEW_TRUE_SCALE,TRUE SCALE,ESCALA REAL

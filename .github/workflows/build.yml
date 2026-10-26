@@ -218,17 +218,31 @@ jobs:
           if ($game.ExitCode -ne 0) { throw "The gravity self-test failed (exit code $($game.ExitCode))." }
           if (-not (Select-String -Path $log -Pattern "kernels agree: true" -Quiet)) { throw "The native kernel did not agree with the GDScript one." }
 
+      # The zip players download, to update with exactly what they get.
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+
       # Updating replaces the running game and its loaded native library,
-      # which Windows only allows by renaming them: install this very build
-      # over a copy of itself while it runs, then start the result.
+      # which Windows only allows by renaming them: install the release zip
+      # over a copy of the game while it runs, then start the result. With
+      # the antivirus scanning, as on players' PCs (hosted runners turn it
+      # off): it holds a freshly written program for seconds.
       - name: Check the game can update itself on Windows
         shell: pwsh
         run: |
+          try {
+            Set-MpPreference -DisableRealtimeMonitoring $false
+            Write-Host "Antivirus real-time scanning: $((Get-MpComputerStatus).RealTimeProtectionEnabled)"
+          } catch {
+            Write-Host "Could not turn the antivirus on: $_"
+          }
           $copy = Join-Path $env:RUNNER_TEMP "installed"
           New-Item -ItemType Directory -Force -Path $copy | Out-Null
-          Copy-Item -Path .\PixelSpaceSandbox.exe, .\libpixelspace.windows.x86_64.dll -Destination $copy
-          $zip = Join-Path $env:RUNNER_TEMP "update.zip"
-          Compress-Archive -Path .\PixelSpaceSandbox.exe, .\libpixelspace.windows.x86_64.dll -DestinationPath $zip
+          Copy-Item -Path .\*.exe, .\*.dll -Destination $copy
+          $zip = (Get-ChildItem -Path release -Filter *-windows.zip | Select-Object -First 1).FullName
+          Write-Host "Updating with $zip"
           $log = Join-Path $PWD "update-test.log"
           $game = Start-Process -FilePath (Join-Path $copy "PixelSpaceSandbox.exe") -ArgumentList "--headless", "--log-file", $log, "--", "--update-self-test=$zip" -PassThru
           $null = $game.Handle

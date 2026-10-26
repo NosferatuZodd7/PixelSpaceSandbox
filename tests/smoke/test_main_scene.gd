@@ -155,3 +155,26 @@ func test_a_newer_build_is_offered_on_the_title_screen() -> void:
 	updater.handle_releases(HTTPRequest.RESULT_SUCCESS, 200, "[]")
 	await wait_frames(1)
 	assert_eq(updater.state, Updater.State.UP_TO_DATE)
+
+
+## The longest update message, with its button, fits on screen in both
+## languages without running into the version line.
+func test_an_update_failure_fits_beside_the_version() -> void:
+	var notice: UpdateNotice = _main.get_node("UI/Root/UpdateNotice")
+	var version: Label = _main.get_node("UI/Root/VersionLabel")
+	var updater: Updater = notice.updater
+	updater.release = {"version": "0.2.0-dev.17", "page_url": "https://example.org/r"}
+	updater.error_key = "UPDATE_ERROR_INSTALL"
+	updater.state = Updater.State.FAILED
+	var screen: Rect2 = Rect2(Vector2.ZERO, (_main.get_node("UI/Root") as Control).size)
+	for locale: String in ["en", "pt_PT"]:
+		TranslationServer.set_locale(locale)
+		updater.state_changed.emit()
+		await wait_frames(2)
+		assert_true(notice.action_button().visible, "%s: with the button to the release page" % locale)
+		var rect: Rect2 = notice.get_global_rect().merge(notice.action_button().get_global_rect())
+		assert_true(screen.encloses(rect), "%s: on screen at %s" % [locale, rect])
+		var text_width: float = version.get_theme_font(&"font").get_string_size(version.text, HORIZONTAL_ALIGNMENT_LEFT, -1, version.get_theme_font_size(&"font_size")).x
+		var version_rect: Rect2 = Rect2(version.get_global_rect().end - Vector2(text_width, version.size.y), Vector2(text_width, version.size.y))
+		assert_false(rect.intersects(version_rect), "%s: clear of the version (%s, %s)" % [locale, rect, version_rect])
+		assert_true(notice.text().contains(tr("UPDATE_ERROR_INSTALL")), notice.text())

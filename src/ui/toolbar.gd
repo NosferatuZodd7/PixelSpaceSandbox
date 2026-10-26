@@ -188,11 +188,15 @@ func _build_power_row() -> void:
 	_describe_buttons()
 
 
-## Each icon's tooltip: the power's name and how to use it.
+## Each icon's tooltip: the power's name and how to use it, and for the
+## powers that throw, that releasing on a body aims at it.
 func _describe_buttons() -> void:
 	for button: Button in _power_buttons.values():
 		var power: Dictionary = button.get_meta(&"power")
-		button.tooltip_text = "%s\n%s" % [tr(str(power["name_key"])), tr(str(power["hint_key"]))]
+		var text: String = "%s\n%s" % [tr(str(power["name_key"])), tr(str(power["hint_key"]))]
+		if power["action"] == "place" or power["action"] == "fling":
+			text += "\n" + tr("POWER_AIM_HINT")
+		button.tooltip_text = text
 
 
 ## A tab with no powers yet and nothing else to say: its powers come later.

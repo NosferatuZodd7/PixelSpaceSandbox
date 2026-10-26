@@ -350,3 +350,106 @@ func test_many_impacts_on_one_body_make_one_notice() -> void:
 	simulation.events.append({"kind": "impact", "body": jupiter, "particle": 0, "time": simulation.clock.time})
 	await wait_frames(2)
 	assert_eq(feed.texts(), PackedStringArray(["6 small bodies struck Jupiter"]), "and kept up to date")
+
+
+## Following the Earth close up, with time running.
+func _watch_earth(scale: float) -> int:
+	var earth: int = _index(&"earth")
+	_view.follow(earth)
+	_view.camera.set_scale_now(scale)
+	await wait_frames(2)
+	return earth
+
+
+func _merged_with(body: int) -> bool:
+	for event: Dictionary in _simulation().events:
+		if event["kind"] == "merge" and (int(event["body"]) == body or int(event["other"]) == body):
+			return true
+	return false
+
+
+## Dragging a new planet onto the Earth throws it at the Earth: it stays in
+## sight on the way and the two collide.
+func test_dragging_onto_a_body_throws_the_new_body_at_it() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = await _watch_earth(2000.0)
+	var mass: float = simulation.state.final_mass(earth)
+	await _choose("rocky_planet")
+	var target: Vector2 = _view.screen_position(earth)
+	await _drag(target + Vector2(60, -40), target)
+	var planet: int = simulation.system.size() - 1
+	assert_eq(simulation.system.body(planet).kind, CelestialBody.Kind.PLANET, "a planet was placed")
+	simulation.clock.paused = false
+	var hidden: int = 0
+	for frame: int in 600:
+		await wait_frames(1)
+		if not simulation.is_present(planet) or simulation.state.final_mass(earth) > mass * 1.5:
+			break
+		if not _view.is_shown(planet):
+			hidden += 1
+	assert_true(simulation.state.final_mass(earth) > mass * 1.5, "they collided: the Earth has both masses")
+	assert_eq(hidden, 0, "the planet was in sight all the way")
+
+
+## Clicking on a body with a place power drops the new body onto it.
+func test_clicking_a_body_drops_the_new_body_onto_it() -> void:
+	var simulation: Simulation = _simulation()
+	var mars: int = _index(&"mars")
+	var mass: float = simulation.state.final_mass(mars)
+	await _choose("rocky_planet")
+	_click(_view.screen_position(mars))
+	await wait_frames(1)
+	var planet: int = simulation.system.size() - 1
+	var planet_mass: float = simulation.state.final_mass(planet)
+	simulation.clock.paused = false
+	# The new planet is the heavier: it takes Mars in.
+	var hit: bool = await wait_until(func() -> bool: return not simulation.is_present(mars), 1.0)
+	assert_true(hit, "it hits Mars at once")
+	assert_almost_eq(simulation.state.final_mass(planet), planet_mass + mass, 1e-12, "one body with both masses")
+
+
+## While following a body, a drag is a throw as seen from it: dragging up
+## sends the new body up past the Earth, not along the Earth's own orbit.
+func test_while_following_a_drag_is_relative_to_what_is_followed() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = await _watch_earth(2000.0)
+	await _choose("rocky_planet")
+	var start: Vector2 = _view.screen_position(earth) + Vector2(80, 0)
+	await _drag(start, start + Vector2(0, -40))
+	var planet: int = simulation.system.size() - 1
+	var b: int = planet * 3
+	var e: int = earth * 3
+	var relative: Vector2 = Vector2(simulation.state.vel[b] - simulation.state.vel[e], simulation.state.vel[b + 1] - simulation.state.vel[e + 1])
+	assert_true(relative.normalized().dot(Vector2(0, 1)) > 0.99, "it moves up the screen relative to the Earth: %s" % relative)
+
+
+## Flinging a body by dragging it onto another throws it straight at it.
+func test_flinging_a_body_onto_another_throws_it_at_it() -> void:
+	var simulation: Simulation = _simulation()
+	var venus: int = _index(&"venus")
+	var earth: int = _index(&"earth")
+	await _choose("fling")
+	await _drag(_view.screen_position(venus), _view.screen_position(earth))
+	simulation.clock.use_preset("5")
+	simulation.clock.paused = false
+	# The Earth is the heavier: it takes Venus in.
+	var hit: bool = await wait_until(func() -> bool: return not simulation.is_present(venus), 6.0)
+	assert_true(hit, "Venus flies into the Earth")
+	assert_true(simulation.is_present(earth), "and the Earth remains, heavier")
+
+
+## Dropped onto a much lighter body, a heavy one barely moves: the light
+## one falls into it.
+func test_a_black_hole_dropped_on_a_planet_stays_put() -> void:
+	var simulation: Simulation = _simulation()
+	var earth: int = _index(&"earth")
+	var e: int = earth * 3
+	var earth_velocity: Vector3 = Vector3(simulation.state.view_vel[e], simulation.state.view_vel[e + 1], simulation.state.view_vel[e + 2])
+	await _choose("black_hole")
+	_click(_view.screen_position(earth))
+	await wait_frames(1)
+	var hole: int = simulation.system.size() - 1
+	var h: int = hole * 3
+	var velocity: Vector3 = Vector3(simulation.state.vel[h], simulation.state.vel[h + 1], simulation.state.vel[h + 2])
+	var kms: float = Units.km_from_au((velocity - earth_velocity).length()) / Units.YEAR_SECONDS
+	assert_true(kms < 1.0, "it moves with the Earth (%.1f km/s apart)" % kms)

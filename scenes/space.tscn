@@ -74,9 +74,9 @@ auto_translate_mode = 2
 [node name="Notifications" type="VBoxContainer" parent="UI/Root"]
 layout_mode = 1
 offset_left = 6.0
-offset_top = 22.0
+offset_top = 56.0
 offset_right = 230.0
-offset_bottom = 100.0
+offset_bottom = 140.0
 mouse_filter = 2
 script = ExtResource("12_notes")
 

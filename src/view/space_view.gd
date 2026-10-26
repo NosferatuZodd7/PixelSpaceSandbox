@@ -17,6 +17,9 @@ const HZ_MAX_STARS: int = 8
 const ZOOM_STEP: float = 1.25
 const PAN_SPEED: float = 280.0
 const DEFAULT_SCALE: float = 100.0
+## A body lighter than this share of what it circles is a moon: it hides
+## inside the disc of what it circles while they overlap on screen.
+const HIDDEN_MOON_SHARE: float = 0.1
 ## How fast bodies grow as the camera zooms in past DEFAULT_SCALE: twice
 ## as big at 300 times the zoom.
 const ZOOM_GROWTH: float = 0.12
@@ -308,7 +311,9 @@ func _layout(delta: float) -> void:
 		_radii[i] = r
 		var shown: bool = simulation.is_present(i)
 		var parent: int = simulation.parent_of(i)
-		if shown and parent != -1:
+		# A moon hides inside its planet's disc until they are apart on
+		# screen; a body nearly as heavy as what it circles stays in sight.
+		if shown and parent != -1 and simulation.state.final_mass(i) < HIDDEN_MOON_SHARE * simulation.state.final_mass(parent):
 			shown = _shown[parent] == 1 and p.distance_to(_screen[parent]) > _radii[parent] + r + 2
 		_shown[i] = 1 if shown else 0
 		var sprite: BodySprite = _sprites[i]
@@ -329,7 +334,7 @@ func _layout(delta: float) -> void:
 				_spin[i] = fposmod(simulation.clock.time * HOURS_PER_YEAR / b.rotation_hours, 1.0)
 			else:
 				_spin[i] = fposmod(_spin[i] + signf(turns_per_second) * MAX_VISUAL_TURNS * delta, 1.0)
-		sprite.update_view(r, light, _spin[i])
+		sprite.update_view(r, light, _spin[i], camera.scale)
 
 
 func _draw_habitable_zone() -> void:
@@ -532,6 +537,15 @@ func _draw_comet(p: int, head: Vector2) -> void:
 ## pattern. start shifts the pattern along the line.
 func draw_dashed(canvas: CanvasItem, points: PackedVector2Array, closed: bool, start: float, color: Color) -> void:
 	var view: Rect2 = Rect2(Vector2.ZERO, camera.viewport_size).grow(DASH_ON + DASH_OFF)
+	var segments: PackedVector2Array = dash_segments(points, closed, start, view)
+	if not segments.is_empty():
+		canvas.draw_multiline(segments, color)
+
+
+## The dashes of a line (pairs of points) inside a rectangle: each piece of
+## the line is cut to the rectangle first, so a line millions of pixels long
+## costs no more than the screen it crosses.
+static func dash_segments(points: PackedVector2Array, closed: bool, start: float, view: Rect2) -> PackedVector2Array:
 	var period: float = DASH_ON + DASH_OFF
 	var segments: PackedVector2Array = PackedVector2Array()
 	var count: int = points.size()
@@ -543,28 +557,35 @@ func draw_dashed(canvas: CanvasItem, points: PackedVector2Array, closed: bool, s
 		if length <= 0.0:
 			continue
 		var end: float = along + length
-		if not _may_cross(view, a, b):
-			along = end
-			continue
-		var at: float = along
-		while at < end:
-			var phase: float = fposmod(at, period)
-			var stop: float = minf(at - phase + (DASH_ON if phase < DASH_ON else period), end)
-			if phase < DASH_ON:
-				segments.append(a.lerp(b, (at - along) / length))
-				segments.append(a.lerp(b, (stop - along) / length))
-			at = maxf(stop, at + 1e-4)
+		# The part of a→b inside the view, as fractions t0..t1 (Liang–Barsky).
+		var t0: float = 0.0
+		var t1: float = 1.0
+		for axis: int in 2:
+			var from: float = a[axis]
+			var change: float = b[axis] - from
+			var low: float = view.position[axis]
+			var high: float = view.end[axis]
+			if change == 0.0:
+				if from < low or from > high:
+					t0 = 1.0
+					t1 = 0.0
+				continue
+			var enter: float = (low - from) / change
+			var leave: float = (high - from) / change
+			t0 = maxf(t0, minf(enter, leave))
+			t1 = minf(t1, maxf(enter, leave))
+		if t0 < t1:
+			var at: float = along + t0 * length
+			var last: float = along + t1 * length
+			while at < last:
+				var phase: float = fposmod(at, period)
+				var stop: float = minf(at - phase + (DASH_ON if phase < DASH_ON else period), last)
+				if phase < DASH_ON:
+					segments.append(a.lerp(b, (at - along) / length))
+					segments.append(a.lerp(b, (stop - along) / length))
+				at = maxf(stop, at + 1e-4)
 		along = end
-	if not segments.is_empty():
-		canvas.draw_multiline(segments, color)
-
-
-## False only when the segment is surely outside the rectangle.
-static func _may_cross(rect: Rect2, a: Vector2, b: Vector2) -> bool:
-	return not (
-		(a.x < rect.position.x and b.x < rect.position.x) or (a.x > rect.end.x and b.x > rect.end.x)
-		or (a.y < rect.position.y and b.y < rect.position.y) or (a.y > rect.end.y and b.y > rect.end.y)
-	)
+	return segments
 
 
 func _draw_overlay() -> void:

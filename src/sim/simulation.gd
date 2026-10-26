@@ -17,6 +17,13 @@ const FRAME_SECONDS: float = 1.0 / 60.0
 const TARGET_STEPS: float = 60.0
 ## Pieces of debris a collision throws up.
 const DEBRIS_COUNT: int = 24
+## An aimed throw (intercept_velocity) is corrected this many times at most,
+## each time from a prediction with this many samples along the way.
+const INTERCEPT_ATTEMPTS: int = 8
+const INTERCEPT_SAMPLES: int = 16
+## An aimed throw arrives within this time (years) at most, faster than the
+## drag asks when needed: long, slow arcs are hard to aim and dull to wait for.
+const INTERCEPT_MAX_FLIGHT: float = 30.0 / Units.YEAR_DAYS
 
 var system: StarSystem
 var clock: SimClock
@@ -88,10 +95,12 @@ func is_pristine() -> bool:
 
 ## From now on every body is integrated under n-body gravity, starting from
 ## exactly where its orbit puts it, in a frame where the system's centre of
-## mass is at rest.
-func leave_pristine() -> void:
+## mass is at rest. Returns the velocity taken off every body to get there
+## (zero once left), which a change given in the old frame takes off too.
+func leave_pristine() -> PackedFloat64Array:
+	var drift: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0])
 	if not state.pristine:
-		return
+		return drift
 	system.place_on_orbits(clock.time)
 	_copy_rails_into_state()
 	var count: int = state.body_count()
@@ -106,15 +115,18 @@ func leave_pristine() -> void:
 		total_mass += state.mass[i]
 		for k: int in 3:
 			momentum[k] += state.vel[i * 3 + k] * state.mass[i]
+	for k: int in 3:
+		drift[k] = momentum[k] / total_mass
 	for i: int in count:
 		for k: int in 3:
-			state.vel[i * 3 + k] -= momentum[k] / total_mass
+			state.vel[i * 3 + k] -= drift[k]
 		state.mode[i] = Gravity.Mode.FREE
 	state.pristine = false
 	state.level = -1
 	state.acc_valid = false
 	_core.call(&"preview", state, clock.time)
 	_show_view()
+	return drift
 
 
 ## Advances by a real duration (seconds) at the clock's speed.
@@ -227,11 +239,17 @@ func place_body(
 	body: CelestialBody, x: float, y: float, z: float, vx: float, vy: float, vz: float, label_key: String
 ) -> int:
 	_record(label_key)
-	leave_pristine()
+	var drift: PackedFloat64Array = leave_pristine()
+	vx -= drift[0]
+	vy -= drift[1]
+	vz -= drift[2]
 	_keep_alternative()
 	var parent: int = dominant_body(x, y, z)
 	var index: int = system.add(body)
-	state.add_body(x, y, z, vx, vy, vz, 0.0, body.radius, Gravity.Mode.FREE, parent)
+	# Given at the moment shown; the state is at the last step, a little
+	# earlier: put it back along its velocity so it shows where it was put.
+	var delta: float = clock.time - state.time
+	state.add_body(x - vx * delta, y - vy * delta, z - vz * delta, vx, vy, vz, 0.0, body.radius, Gravity.Mode.FREE, parent)
 	var front: int = emit_front(x, y, z, body.luminosity > 0.0, true, label_key, index)
 	_change_mass(index, front, body.mass)
 	_change_light(index, front, body.luminosity)
@@ -278,7 +296,10 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 	if not is_present(index):
 		return
 	_record(label_key)
-	leave_pristine()
+	var drift: PackedFloat64Array = leave_pristine()
+	vx -= drift[0]
+	vy -= drift[1]
+	vz -= drift[2]
 	_keep_alternative()
 	_free_from_rails(index)
 	var b: int = index * 3
@@ -289,6 +310,9 @@ func fling(index: int, vx: float, vy: float, vz: float, label_key: String) -> vo
 		_leave_ghost(index, front)
 		_change_mass(index, front, mass)
 		_change_light(index, front, light)
+	# From the last step, where its ghost starts too: a body never feels
+	# its own ghost, which would pull hard at the smallest distance. (The
+	# moment shown is at most a step later.)
 	state.vel[b] = vx
 	state.vel[b + 1] = vy
 	state.vel[b + 2] = vz
@@ -523,6 +547,105 @@ func predict_particle(
 	copy.acc_valid = false
 	var particle: int = copy.add_particle(x, y, z, vx, vy, vz, 0.0, 0)
 	return _core.call(&"predict", copy, PackedInt32Array(), PackedInt32Array([particle]), duration, samples, 20000)
+
+
+## The velocity (AU/yr) that takes a body from a point into a target body,
+## at about a speed (AU/yr) relative to it: aimed where the target will be,
+## with the pull of everything on the way (the kernel's prediction),
+## corrected until the prediction hits. The thrown body is a new one of a
+## mass, or the body thrown (its index). For the powers that throw a body
+## at another.
+func intercept_velocity(
+	target: int, x: float, y: float, z: float, speed: float, mass: float, thrown: int = -1
+) -> PackedFloat64Array:
+	var b: int = target * 3
+	var to_target: Vector3 = Vector3(state.view_pos[b] - x, state.view_pos[b + 1] - y, state.view_pos[b + 2] - z)
+	speed = maxf(speed, to_target.length() / INTERCEPT_MAX_FLIGHT)
+	var flight: float = to_target.length() / maxf(speed, 1e-12)
+	var aim: Vector3 = Vector3(state.view_vel[b], state.view_vel[b + 1], state.view_vel[b + 2]) + to_target.normalized() * speed
+	# Each prediction says how far it misses; a correction that misses by
+	# more is taken back halfway.
+	var best: Vector3 = aim
+	var best_miss: float = INF
+	for attempt: int in INTERCEPT_ATTEMPTS:
+		var path: PackedFloat64Array = _predict_throw(target, x, y, z, aim, flight, mass, thrown)
+		var found: PackedFloat64Array = _intercept_correction(target, path, flight)
+		if found[3] <= 0.0:
+			return PackedFloat64Array([aim.x, aim.y, aim.z])
+		if found[3] < best_miss:
+			best = aim
+			best_miss = found[3]
+			aim = best + Vector3(found[0], found[1], found[2])
+		else:
+			aim = best + (aim - best) * 0.5
+	return PackedFloat64Array([best.x, best.y, best.z])
+
+
+## Where a target and a body thrown from a point go over a flight:
+## INTERCEPT_SAMPLES positions of the target, then of the thrown body (NAN
+## once it touches something).
+func _predict_throw(
+	target: int, x: float, y: float, z: float, v: Vector3, flight: float, mass: float, thrown: int
+) -> PackedFloat64Array:
+	var copy: NBodyState = state.copy()
+	_drop_particles(copy)
+	if copy.pristine:
+		copy.pristine = false
+		for i: int in copy.body_count():
+			copy.mode[i] = Gravity.Mode.FREE
+			copy.parent[i] = -1
+	copy.time = clock.time
+	copy.pos = state.view_pos.duplicate()
+	copy.vel = state.view_vel.duplicate()
+	copy.level = -1
+	copy.acc_valid = false
+	# Other planets' moons hardly change a throw but need tiny steps: left
+	# out (the target's and the thrown body's own moons stay).
+	for i: int in copy.body_count():
+		if i < system.size() and i != target and i != thrown and system.body(i).kind == CelestialBody.Kind.MOON:
+			var parent: int = parent_of(i)
+			if parent != target and (thrown < 0 or parent != thrown):
+				copy.mode[i] = Gravity.Mode.GONE
+	var start: PackedFloat64Array = PackedFloat64Array([x, y, z, v.x, v.y, v.z])
+	if thrown < 0:
+		thrown = copy.body_count()
+		copy.add_body(x, y, z, v.x, v.y, v.z, mass, 0.0, Gravity.Mode.FREE, -1)
+	for k: int in 3:
+		copy.pos[thrown * 3 + k] = start[k]
+		copy.vel[thrown * 3 + k] = start[k + 3]
+	copy.mode[thrown] = Gravity.Mode.FREE
+	return _core.call(
+		&"predict", copy, PackedInt32Array([target, thrown]), PackedInt32Array(), flight, INTERCEPT_SAMPLES, 20000
+	)
+
+
+## How a predicted throw misses its target, as [the change of velocity that
+## would bring it on, x, y, z, then the miss (AU), 0 when it hits]: the miss
+## at the end, or when the thrown body stopped short against something
+## else, spread over the time it took.
+func _intercept_correction(target: int, path: PackedFloat64Array, flight: float) -> PackedFloat64Array:
+	var hit: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0, 0.0])
+	var n: int = INTERCEPT_SAMPLES
+	var last: int = n - 1
+	while last >= 0 and is_nan(path[(n + last) * 3]):
+		last -= 1
+	if last < 0:
+		return hit
+	var target_at: Vector3 = Vector3(path[last * 3], path[last * 3 + 1], path[last * 3 + 2])
+	var thrown_at: Vector3 = Vector3(path[(n + last) * 3], path[(n + last) * 3 + 1], path[(n + last) * 3 + 2])
+	var miss: Vector3 = target_at - thrown_at
+	var elapsed: float = flight * (last + 1) / n
+	if last < n - 1:
+		# It touched something before the end: the target, if it was about
+		# to (within one sample's flight of it).
+		var before: int = (n + maxi(last - 1, 0)) * 3
+		var step: float = (thrown_at - Vector3(path[before], path[before + 1], path[before + 2])).length()
+		if miss.length() <= step * 1.5 + state.radius[target]:
+			return hit
+	elif miss.length() < state.radius[target] * 0.5:
+		return hit
+	var change: Vector3 = miss / elapsed
+	return PackedFloat64Array([change.x, change.y, change.z, miss.length()])
 
 
 ## Brightness (L☉) of a body as seen at a point now: light travels too.
@@ -846,10 +969,15 @@ func _keep_alternative() -> void:
 	alternative = state.copy()
 	alternative_front = null
 	_alternative_pending = true
+	_drop_particles(alternative)
+
+
+## Takes the small bodies out of a copy of the state (bodies only).
+static func _drop_particles(copy: NBodyState) -> void:
 	for field: StringName in NBodyState.ARRAY_FIELDS:
 		if String(field).begins_with("p_"):
-			alternative.set(field, (alternative.get(field) as Variant).duplicate().slice(0, 0))
-	alternative.p_view = PackedFloat64Array()
+			copy.set(field, (copy.get(field) as Variant).duplicate().slice(0, 0))
+	copy.p_view = PackedFloat64Array()
 
 
 ## Runs the copy of the system as it would have been to the shown moment.

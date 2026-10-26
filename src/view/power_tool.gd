@@ -2,8 +2,11 @@ class_name PowerTool
 extends Node2D
 ## Uses the chosen Cosmos power or tool in space: a place power puts a new
 ## body on a circular orbit where the player clicks (or sweeping through,
-## for a flyby) and throws it when they drag; fling throws an existing body
-## by dragging from it; delete removes the body clicked. While aiming, the
+## for a flyby) and throws it when they drag; a drag that ends on a body
+## throws it straight at that body, and a click on a body drops it onto it.
+## Fling throws an existing body by dragging from it (at another body, when
+## the drag ends on one); delete removes the body clicked. While following a
+## body, drags are throws as seen from it. While aiming, the
 ## path it would take around what it circles is drawn. The ruler measures
 ## a drag (in AU, km and light-time; an end on a body follows it), the
 ## light pulse sends a ring of light from the body clicked. Right click or
@@ -121,7 +124,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_place(_press_at, drag)
 		"fling":
 			if _target != -1 and drag.length() >= MIN_DRAG:
-				var v: PackedFloat64Array = _thrown_velocity(_target, drag)
+				var v: PackedFloat64Array = _thrown_velocity(_target, drag, _aim_at(button.position, _target))
 				simulation.fling(_target, v[0], v[1], v[2], "FRONT_FLUNG")
 				used.emit(_power, _target)
 		"delete":
@@ -176,15 +179,49 @@ func _cancel() -> void:
 
 func _place(at: Vector2, drag: Vector2) -> void:
 	var body: CelestialBody = PowerCatalog.make_body(_power, simulation.system)
-	var point: PackedFloat64Array = _point_at(at)
-	var v: PackedFloat64Array = _new_velocity(point, drag, body.mass)
-	var index: int = simulation.place_body(body, point[0], point[1], point[2], v[0], v[1], v[2], "FRONT_PLACED")
+	var launch: PackedFloat64Array = _launch(at, drag, body)
+	var index: int = simulation.place_body(
+		body, launch[0], launch[1], launch[2], launch[3], launch[4], launch[5], "FRONT_PLACED"
+	)
 	used.emit(_power, index)
 
 
+## Where a new body starts and how it moves ([x, y, z, vx, vy, vz]) for a
+## press at a pixel and a drag: dropped onto the body under a click, thrown
+## at the body the drag ends on, else at the press point on a circular orbit
+## (or a flyby), or thrown along the drag.
+func _launch(at: Vector2, drag: Vector2, body: CelestialBody) -> PackedFloat64Array:
+	var target: int = view.pick(at + drag)
+	if target != -1 and drag.length() < MIN_DRAG:
+		return _drop_onto(target, at, body)
+	var point: PackedFloat64Array = _point_at(at)
+	var v: PackedFloat64Array = _new_velocity(point, drag, body.mass, target)
+	return PackedFloat64Array([point[0], point[1], point[2], v[0], v[1], v[2]])
+
+
+## A new body touching a body on the side clicked, falling onto it: they
+## collide at once. It falls with its share of the speed they meet at (all
+## of it onto a star, almost none for a black hole dropped on a planet).
+func _drop_onto(target: int, at: Vector2, body: CelestialBody) -> PackedFloat64Array:
+	var b: int = target * 3
+	var side: Vector2 = (at - view.screen_position(target)) * Vector2(1, -1)
+	side = side.normalized() if side.length() >= 1.0 else Vector2.UP
+	var reach: float = (simulation.state.radius[target] + body.radius) * 1.05
+	var target_mass: float = simulation.state.final_mass(target)
+	var mu: float = Units.G * simulation.state.g_scale * (target_mass + body.mass)
+	var fall: float = sqrt(2.0 * mu / reach) * target_mass / maxf(target_mass + body.mass, 1e-30)
+	var pos: PackedFloat64Array = simulation.state.view_pos
+	var vel: PackedFloat64Array = simulation.state.view_vel
+	return PackedFloat64Array([
+		pos[b] + side.x * reach, pos[b + 1] + side.y * reach, pos[b + 2],
+		vel[b] - side.x * fall, vel[b + 1] - side.y * fall, vel[b + 2],
+	])
+
+
 ## The velocity of a new body at a point: on a circular orbit (or a flyby)
-## when there is no drag, else along the drag around the same body.
-func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float) -> PackedFloat64Array:
+## when there is no drag, else along the drag around the same body, or
+## straight at the body the drag ends on.
+func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float, target: int = -1) -> PackedFloat64Array:
 	var base: PackedFloat64Array
 	var reference: int = simulation.dominant_body(point[0], point[1], point[2])
 	if _power.has("flyby_kms"):
@@ -196,31 +233,55 @@ func _new_velocity(point: PackedFloat64Array, drag: Vector2, mass: float) -> Pac
 		base = simulation.circular_velocity(point[0], point[1], point[2], mass)
 	if drag.length() < MIN_DRAG:
 		return base
+	if target != -1:
+		return simulation.intercept_velocity(target, point[0], point[1], point[2], _drag_speed(reference, base, drag), mass)
 	return _along_drag(reference, base, drag)
 
 
-## The velocity of a flung body: along the drag, relative to what it circles.
-func _thrown_velocity(index: int, drag: Vector2) -> PackedFloat64Array:
+## The velocity of a flung body: along the drag, relative to what it circles,
+## or straight at the body the drag ends on (target).
+func _thrown_velocity(index: int, drag: Vector2, target: int = -1) -> PackedFloat64Array:
 	var current: PackedFloat64Array = simulation.state.view_vel.slice(index * 3, index * 3 + 3)
+	if target != -1:
+		var speed: float = _drag_speed(simulation.parent_of(index), current, drag)
+		var b: int = index * 3
+		var pos: PackedFloat64Array = simulation.state.view_pos
+		return simulation.intercept_velocity(target, pos[b], pos[b + 1], pos[b + 2], speed, simulation.state.final_mass(index), index)
 	return _along_drag(simulation.parent_of(index), current, drag)
 
 
-## A velocity along the drag (screen y points down, space y up), relative to
-## a reference body, at the reference speed times the drag length over
-## DRAG_PIXELS. The reference speed is that of base relative to the body.
-func _along_drag(reference: int, base: PackedFloat64Array, drag: Vector2) -> PackedFloat64Array:
-	var frame: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0])
-	if reference >= 0:
-		frame = simulation.state.view_vel.slice(reference * 3, reference * 3 + 3)
-	var dx: float = base[0] - frame[0]
-	var dy: float = base[1] - frame[1]
-	var dz: float = base[2] - frame[2]
-	var speed: float = sqrt(dx * dx + dy * dy + dz * dz)
+## The body a drag released at a pixel is aimed at (not the thrown one), or -1.
+func _aim_at(release: Vector2, thrown: int) -> int:
+	var target: int = view.pick(release)
+	return target if target != thrown else -1
+
+
+## The speed a drag means: the reference speed (that of base relative to
+## the reference body) times the drag length over DRAG_PIXELS.
+func _drag_speed(reference: int, base: PackedFloat64Array, drag: Vector2) -> float:
+	var frame: PackedFloat64Array = _velocity_of(reference)
+	var speed: float = Vector3(base[0] - frame[0], base[1] - frame[1], base[2] - frame[2]).length()
 	if speed <= 0.0:
 		speed = 1.0
-	speed *= drag.length() / DRAG_PIXELS
+	return speed * drag.length() / DRAG_PIXELS
+
+
+## A velocity along the drag (screen y points down, space y up) at the
+## speed it means, relative to the body being followed or else to the
+## reference body: a throw as the player sees it.
+func _along_drag(reference: int, base: PackedFloat64Array, drag: Vector2) -> PackedFloat64Array:
+	var speed: float = _drag_speed(reference, base, drag)
+	var frame: PackedFloat64Array = _velocity_of(reference)
+	if view.followed != -1 and simulation.is_present(view.followed):
+		frame = _velocity_of(view.followed)
 	var direction: Vector2 = drag.normalized()
 	return PackedFloat64Array([frame[0] + direction.x * speed, frame[1] - direction.y * speed, frame[2]])
+
+
+func _velocity_of(index: int) -> PackedFloat64Array:
+	if index < 0:
+		return PackedFloat64Array([0.0, 0.0, 0.0])
+	return simulation.state.view_vel.slice(index * 3, index * 3 + 3)
 
 
 func _draw() -> void:
@@ -232,10 +293,17 @@ func _draw() -> void:
 		"place":
 			var at: Vector2 = _press_at if _pressed else _hover
 			var drag: Vector2 = (_hover - _press_at) if _pressed else Vector2.ZERO
-			var point: PackedFloat64Array = _point_at(at)
 			var body: CelestialBody = PowerCatalog.make_body(_power, simulation.system)
-			var v: PackedFloat64Array = _new_velocity(point, drag, body.mass)
-			_draw_path(point, v, body.mass, path_color)
+			var target: int = view.pick(_hover)
+			if target != -1:
+				# Aimed at a body: it will be hit.
+				_draw_brackets(view.screen_position(target), view.display_radius(target) + 3, Palette.color(&"ui_danger"))
+				if drag.length() >= MIN_DRAG:
+					draw_line(at, view.screen_position(target), Palette.color(&"ui_danger"))
+					draw_arc(at, 4.0, 0.0, TAU, 12, accent)
+				return
+			var launch: PackedFloat64Array = _launch(at, drag, body)
+			_draw_path(launch.slice(0, 3), launch.slice(3, 6), body.mass, path_color)
 			if drag.length() >= MIN_DRAG:
 				draw_line(at, _hover, accent)
 			draw_arc(at, 4.0, 0.0, TAU, 12, accent)
@@ -247,6 +315,11 @@ func _draw() -> void:
 			_draw_brackets(at, view.display_radius(target) + 3, accent)
 			if _pressed and _hover.distance_to(_press_at) >= MIN_DRAG:
 				var drag: Vector2 = _hover - _press_at
+				var aimed: int = _aim_at(_hover, target)
+				if aimed != -1:
+					_draw_brackets(view.screen_position(aimed), view.display_radius(aimed) + 3, Palette.color(&"ui_danger"))
+					draw_line(at, view.screen_position(aimed), Palette.color(&"ui_danger"))
+					return
 				var v: PackedFloat64Array = _thrown_velocity(target, drag)
 				var b: int = target * 3
 				_draw_path(simulation.state.view_pos.slice(b, b + 3), v, simulation.state.final_mass(target), path_color)

@@ -86,14 +86,16 @@ func test_a_removed_sun_keeps_pulling_until_the_news_arrives() -> void:
 func test_a_flung_planet_keeps_its_identity_and_leaves_a_ghost() -> void:
 	var changed: Simulation = _simulation()
 	var reference: Simulation = _simulation()
-	reference.leave_pristine()
+	var drift: PackedFloat64Array = reference.leave_pristine()
 	var jupiter: int = changed.system.index_of(&"jupiter")
 	var bodies: int = changed.state.body_count()
 	changed.fling(jupiter, 0.0, 0.0, 0.0, "FRONT_FLUNG")
 	assert_eq(changed.system.index_of(&"jupiter"), jupiter, "still the same Jupiter")
 	assert_eq(changed.state.body_count(), bodies + 1, "a ghost keeps its old path")
 	assert_eq(changed.state.mode[bodies], Gravity.Mode.GHOST, "the ghost")
-	assert_eq(changed.state.vel[jupiter * 3], 0.0, "Jupiter stopped dead")
+	# Stopped as seen when it was flung: the first change also puts the
+	# system's centre of mass at rest, which every velocity follows.
+	assert_eq(changed.state.vel[jupiter * 3], -drift[0], "Jupiter stopped dead")
 	# Saturn is more than 4 AU away: over half an hour of light. Run 20 minutes.
 	_run([changed, reference], 20.0, "2")
 	assert_eq(_position(changed, &"saturn"), _position(reference, &"saturn"), "Saturn feels the old Jupiter")
@@ -315,3 +317,72 @@ func test_world_laws_change_the_rules() -> void:
 	var r: float = Vector3(simulation.system.x(earth), simulation.system.y(earth), simulation.system.z(earth)).length()
 	assert_true(r < 0.99, "the Earth falls inwards under the stronger pull (%s AU)" % r)
 	assert_true(before.size() == 3)
+
+
+## The screen shows a moment between the kernel's steps. A body placed
+## there starts from where it is shown, with its velocity: it does not
+## jump, and a throw lands where it was aimed.
+func test_a_new_body_starts_at_the_moment_shown() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.leave_pristine()
+	for frame: int in 7:
+		simulation.advance(1.0 / 60.0)
+	assert_true(simulation.clock.time > simulation.state.time, "the shown moment is past the last step")
+	var star: int = simulation.place_body(_sun_like_star(), 3.0, 1.0, 0.0, -8.0, 4.0, 0.0, "FRONT_PLACED")
+	simulation.advance(0.0)
+	var placed: PackedFloat64Array = simulation.state.view_pos.slice(star * 3, star * 3 + 3)
+	assert_almost_eq(placed[0], 3.0, 1e-9, "the new body is where it was put")
+	assert_almost_eq(placed[1], 1.0, 1e-9)
+	var velocity: PackedFloat64Array = simulation.state.view_vel.slice(star * 3, star * 3 + 3)
+	assert_almost_eq(velocity[0], -8.0, 1e-3, "moving as it was thrown")
+	assert_almost_eq(velocity[1], 4.0, 1e-3)
+
+
+## The first change switches the system from its real orbits to gravity,
+## seen from the centre of mass: a body placed then moves as it was thrown
+## relative to the others, not with the old frame's drift.
+func test_the_first_change_keeps_a_new_body_moving_as_thrown() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.advance(1.0 / 60.0)
+	var earth: int = simulation.system.index_of(&"earth")
+	var e: int = earth * 3
+	var x: float = simulation.state.view_pos[e] + 0.002
+	var y: float = simulation.state.view_pos[e + 1]
+	var z: float = simulation.state.view_pos[e + 2]
+	var v: PackedFloat64Array = simulation.circular_velocity(x, y, z, 0.0)
+	var wanted: Vector3 = Vector3(v[0] - simulation.state.view_vel[e], v[1] - simulation.state.view_vel[e + 1], v[2] - simulation.state.view_vel[e + 2])
+	var moon: CelestialBody = _sun_like_star()
+	moon.kind = CelestialBody.Kind.MOON
+	moon.mass = 1e-12
+	moon.luminosity = 0.0
+	moon.radius = Units.au_from_km(100.0)
+	var index: int = simulation.place_body(moon, x, y, z, v[0], v[1], v[2], "FRONT_PLACED")
+	simulation.advance(0.0)
+	var m: int = index * 3
+	var got: Vector3 = Vector3(simulation.state.view_vel[m] - simulation.state.view_vel[e], simulation.state.view_vel[m + 1] - simulation.state.view_vel[e + 1], simulation.state.view_vel[m + 2] - simulation.state.view_vel[e + 2])
+	assert_true((got - wanted).length() < 1e-6, "relative to the Earth as thrown (off by %s AU/yr)" % (got - wanted).length())
+
+
+## A body thrown at a giant from close by, even slowly, is aimed so that it
+## hits it, and soon: an aimed throw arrives within a month.
+func test_an_aimed_throw_hits_a_giant_soon() -> void:
+	var simulation: Simulation = _simulation()
+	simulation.advance(1.0 / 60.0)
+	var jupiter: int = simulation.system.index_of(&"jupiter")
+	var j: int = jupiter * 3
+	var x: float = simulation.state.view_pos[j] + 0.2
+	var y: float = simulation.state.view_pos[j + 1] + 0.1
+	var z: float = simulation.state.view_pos[j + 2]
+	var giant: CelestialBody = _sun_like_star()
+	giant.kind = CelestialBody.Kind.PLANET
+	giant.mass = Units.solar_masses_from_kg(318.0 * Units.EARTH_MASS_KG)
+	giant.radius = Units.au_from_km(69911.0)
+	giant.luminosity = 0.0
+	var slow: float = Units.au_from_km(3.3) * Units.YEAR_SECONDS
+	var v: PackedFloat64Array = simulation.intercept_velocity(jupiter, x, y, z, slow, giant.mass)
+	var thrown: int = simulation.place_body(giant, x, y, z, v[0], v[1], v[2], "FRONT_PLACED")
+	var start: float = simulation.clock.time
+	simulation.clock.use_preset("5")
+	while simulation.is_present(thrown) and simulation.is_present(jupiter) and simulation.clock.time - start < 45.0 / Units.YEAR_DAYS:
+		simulation.advance(1.0 / 60.0)
+	assert_false(simulation.is_present(thrown) and simulation.is_present(jupiter), "they collided within 45 days")

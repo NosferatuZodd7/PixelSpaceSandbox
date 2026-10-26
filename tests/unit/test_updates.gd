@@ -122,6 +122,30 @@ func test_a_new_build_replaces_the_old_files_and_they_are_cleared_later() -> voi
 	assert_true(FileAccess.file_exists(install.path_join("settings_note.txt")))
 
 
+## When one file cannot be put in place, the files already swapped go back:
+## the game is never left half old and half new.
+func test_a_file_that_cannot_be_replaced_undoes_the_whole_update() -> void:
+	var install: String = WORK.path_join("game")
+	DirAccess.make_dir_recursive_absolute(install)
+	_write(install.path_join("libpixelspace.windows.x86_64.dll"), "old kernel")
+	# A folder where the game file should go: nothing can be moved there.
+	DirAccess.make_dir_recursive_absolute(install.path_join("PixelSpaceSandbox.exe"))
+	_write(install.path_join("PixelSpaceSandbox.exe").path_join("in_the_way.txt"), "blocks it")
+	var zip_path: String = WORK.path_join("update.zip")
+	var packer: ZIPPacker = ZIPPacker.new()
+	assert_eq(packer.open(zip_path), OK)
+	for entry: Array in [["libpixelspace.windows.x86_64.dll", "new kernel"], ["PixelSpaceSandbox.exe", "new game"]]:
+		packer.start_file(entry[0])
+		packer.write_file((entry[1] as String).to_utf8_buffer())
+		packer.close_file()
+	packer.close()
+	var errors: PackedStringArray = UpdateInstaller.install(zip_path, install, 0)
+	assert_false(errors.is_empty(), "the problem is reported")
+	assert_eq(FileAccess.get_file_as_string(install.path_join("libpixelspace.windows.x86_64.dll")), "old kernel", "the kernel already swapped is put back")
+	assert_false(FileAccess.file_exists(install.path_join("libpixelspace.windows.x86_64.dll.old")), "nothing is left aside")
+	assert_false(DirAccess.dir_exists_absolute(install.path_join(UpdateInstaller.STAGING)), "nor unpacked")
+
+
 func test_a_broken_download_changes_nothing() -> void:
 	var install: String = WORK.path_join("game")
 	DirAccess.make_dir_recursive_absolute(install)

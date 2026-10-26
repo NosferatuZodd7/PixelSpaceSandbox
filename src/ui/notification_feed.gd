@@ -34,6 +34,8 @@ func push(text: String, body: int, key: String = "") -> void:
 	entry.flat = true
 	entry.focus_mode = Control.FOCUS_NONE
 	entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# Long notices wrap within the corner instead of running under the date.
+	entry.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	entry.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	entry.theme_type_variation = &"ArrowButton"
 	entry.set_meta(&"age", 0.0)

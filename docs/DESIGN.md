@@ -379,11 +379,27 @@ from the body at the committed moment:
   dominates the point (the smallest Hill sphere containing it, else the
   strongest pull), counting both masses, so two suns circle each other; a
   drag throws it instead, at the circular speed times the drag length over
-  40 pixels, along the drag. A flyby power (the rogue planet) gives it the
-  speed that passes the point closest to its star and leaves at 20 km/s.
-- `fling`: the body keeps its index and gets the new velocity; a ghost
-  copy keeps the old path, mass and light, with any change of its own still
-  on its way, until the news reaches each receiver.
+  40 pixels, along the drag (as seen from the body the camera follows, if
+  any). A flyby power (the rogue planet) gives it the speed that passes the
+  point closest to its star and leaves at 20 km/s. The body starts where it
+  is shown: the screen shows a moment up to a step after the kernel's last
+  step, so it goes into the state moved back along its velocity.
+- Aimed throws: a drag released on a body throws the new body (or the
+  flung one) into it. `Simulation.intercept_velocity` predicts the flight
+  with the kernel (the thrown body with its mass; other planets' moons left
+  out, as they only make the steps tiny), corrects the aim from where it
+  misses up to eight times (taking back a correction that misses by more),
+  and arrives within a month at most. A click on a body drops the new body
+  onto it, touching it on the side clicked, with its share of the speed they
+  meet at (a black hole dropped on a planet barely moves).
+- `fling`: the body keeps its index and gets the new velocity, from where
+  it is at the last step (its ghost starts there too: a body would feel its
+  own ghost hard at any distance); a ghost copy keeps the old path, mass and
+  light, with any change of its own still on its way, until the news
+  reaches each receiver.
+- The first change also moves the system to a frame where its centre of
+  mass is at rest; velocities given for that change (worked out in the old
+  frame) lose the same drift.
 - `remove_body`: the body becomes a ghost that loses all of its mass and
   light behind the front, including an arrival still spreading.
 
@@ -395,7 +411,15 @@ system has changed, every body shows the osculating orbit it is on around
 what it circles now (the kernel's parents), recomputed as it drifts.
 Fronts are drawn as dashed rings, warm for light and violet for gravity,
 only along the part that crosses the screen when huge, and labelled where
-they are nearest the middle of the screen without covering anything.
+they are nearest the middle of the screen without covering anything. Every
+dashed line is cut to the screen before it is cut into dashes, so an open
+orbit reaching millions of pixels away costs no more than the screen.
+
+A body lighter than a tenth of what it circles is a moon and hides inside
+that body's disc while they overlap on screen; a heavier one (a second
+Earth thrown at the Earth) always stays in sight. Rings follow a body
+drawn larger than life, but reach at most four drawn radii out (or their
+true size, if larger), so a ring torn around a black hole stays near it.
 
 ### Collisions
 
@@ -520,10 +544,16 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 - `UpdateInstaller` unpacks into `.update/` first (a broken download changes
   nothing), then moves each running file aside as `<name>.old` (Windows can
   rename a running program and its loaded library, not overwrite them) and
-  the new one in. The next start deletes the `.old` files.
+  the new one in. A busy file is tried again for up to 15 s: on Windows an
+  antivirus holds a freshly written program while it scans it (the game's
+  program, with everything packed in, is big). If a file still cannot be
+  swapped, the ones already swapped go back, so the game is never half old
+  and half new. It runs on a worker thread, so the window stays responsive.
+  The next start deletes the `.old` files.
 - `UpdateSelfTest` (`-- --update-self-test=<zip>`) installs a zip over the
-  running game; the Windows CI job uses it on a copy of the build and then
-  starts the result.
+  running game; the Windows CI job uses it with the release zip players
+  download, on a copy of the build, with the antivirus scanning (hosted
+  runners turn it off), and then starts the result.
 
 ## Testing
 
@@ -579,3 +609,4 @@ as a final release, each with `PixelSpaceSandbox-<version>-windows.zip`,
 | 21 | Departure Mono (11 px) for interface text and window headers; Press Start 2P only for the title and the date (owner found Micro 5 hard to read) | 2026-10 |
 | 22 | No dithering in the sky backdrop: nebulae in flat bands of colour; the habitable zone as its two edges, without a fill (owner's request) | 2026-10 |
 | 23 | Builds only for code pushes to `main`/`beta`, tags and manual runs; documentation-only pushes and pull requests do not build (to save Actions minutes) | 2026-10 |
+| 24 | A drag released on a body throws into it (aimed with the kernel's prediction, arriving within a month); a click on a body drops onto it; drags are seen from the followed body | 2026-10 |

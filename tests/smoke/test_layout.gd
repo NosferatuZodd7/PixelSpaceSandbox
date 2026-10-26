@@ -72,6 +72,8 @@ func test_each_power_is_described_on_one_line() -> void:
 				assert_eq(_cut_labels(), PackedStringArray(), "%s, %s" % [locale, id])
 				var tooltip: String = _toolbar.power_button(id).tooltip_text
 				assert_true(tooltip.contains(tr(str(_toolbar.current_power().get("name_key", id)))), "%s: its tooltip names it: %s" % [id, tooltip])
+				if ["place", "fling"].has(_toolbar.current_power().get("action")):
+					assert_true(tooltip.contains(tr("POWER_AIM_HINT")), "%s: and says a body can be aimed at: %s" % [id, tooltip])
 				_toolbar.cancel_power()
 
 
@@ -118,3 +120,27 @@ func test_an_inspect_window_does_not_cover_its_body() -> void:
 		var windows: Array[InspectWindow] = _screen.call(&"inspect_windows")
 		var rect: Rect2 = windows[0].get_global_rect()
 		assert_false(rect.grow(4.0).has_point(view.screen_position(index)), "%s at %s, window at %s" % [id, view.screen_position(index), rect])
+
+
+## Long notices wrap in their corner instead of running under the date or
+## the speed line (at its widest, saying the game cannot keep up).
+func test_long_notices_stay_in_their_corner() -> void:
+	var feed: NotificationFeed = _screen.get_node("UI/Root/Notifications")
+	var counter: TimeCounter = _screen.get_node("UI/Root/TimeCounter")
+	var simulation: Simulation = _screen.get(&"simulation")
+	simulation.clock.paused = true
+	for locale: String in LOCALES:
+		TranslationServer.set_locale(locale)
+		simulation.clock.paused = false
+		simulation.lagging = true
+		counter.refresh()
+		feed.push(tr("NOTE_TORN") % ["Earth", "Black hole 1"], -1)
+		await wait_frames(2)
+		var entry: Button = feed.entry(feed.texts().size() - 1)
+		var rect: Rect2 = entry.get_global_rect()
+		for line: Node in counter.get_children():
+			var label: Label = line as Label
+			var font: Font = label.get_theme_font(&"font")
+			var width: float = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size(&"font_size")).x
+			var text_rect: Rect2 = Rect2(label.get_global_rect().get_center() - Vector2(width * 0.5, label.size.y * 0.5), Vector2(width, label.size.y))
+			assert_false(rect.intersects(text_rect), "%s: '%s' at %s runs into '%s' at %s" % [locale, entry.text, rect, label.text, text_rect])

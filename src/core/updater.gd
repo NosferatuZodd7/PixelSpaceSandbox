@@ -26,6 +26,10 @@ var error_key: String = ""
 
 var _http: HTTPRequest
 var _download_path: String = ""
+## The worker-thread task putting the files in place (it may wait for busy
+## files), and what it reported.
+var _install_task: int = -1
+var _install_errors: PackedStringArray = []
 
 
 ## Whether this run of the game can update itself: an exported game that
@@ -51,7 +55,17 @@ func _ready() -> void:
 		_set_state(State.DISABLED)
 
 
+func _exit_tree() -> void:
+	if _install_task != -1:
+		WorkerThreadPool.wait_for_task_completion(_install_task)
+		_install_task = -1
+
+
 func _process(_delta: float) -> void:
+	if _install_task != -1 and WorkerThreadPool.is_task_completed(_install_task):
+		WorkerThreadPool.wait_for_task_completion(_install_task)
+		_install_task = -1
+		_finish_install()
 	if state == State.DOWNLOADING:
 		var total: int = _http.get_body_size()
 		var size: int = int(release.get("size", 0))
@@ -127,14 +141,25 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray, 
 			if expected.is_empty() or expected != UpdateChecker.file_sha256(_download_path):
 				_fail("UPDATE_ERROR_CHECKSUM")
 				return
-			var errors: PackedStringArray = UpdateInstaller.install(_download_path, install_dir())
-			DirAccess.remove_absolute(_download_path)
-			if not errors.is_empty():
-				push_warning("Update: %s" % "; ".join(errors))
-				_fail("UPDATE_ERROR_INSTALL")
-				return
-			_set_state(State.RESTARTING)
-			get_tree().create_timer(RESTART_DELAY).timeout.connect(_restart)
+			# On a worker thread: the window stays responsive while busy
+			# files are tried again.
+			var zip_path: String = _download_path
+			var folder: String = install_dir()
+			_install_task = WorkerThreadPool.add_task(
+				func() -> void: _install_errors = UpdateInstaller.install(zip_path, folder),
+				false,
+				"Install update"
+			)
+
+
+func _finish_install() -> void:
+	DirAccess.remove_absolute(_download_path)
+	if not _install_errors.is_empty():
+		push_warning("Update: %s" % "; ".join(_install_errors))
+		_fail("UPDATE_ERROR_INSTALL")
+		return
+	_set_state(State.RESTARTING)
+	get_tree().create_timer(RESTART_DELAY).timeout.connect(_restart)
 
 
 func _restart() -> void:
